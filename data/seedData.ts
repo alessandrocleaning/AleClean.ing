@@ -9,62 +9,22 @@ export const SEED_SITES: Site[] = [
 ];
 
 export const SEED_EMPLOYEES: Employee[] = [
-  {
-    id: 'emp-1',
-    firstName: 'Mario',
-    lastName: 'Rossi',
-    hourlyRate: 12.50,
-    contractHours: { mon: 8, tue: 8, wed: 8, thu: 8, fri: 8, sat: 0, sun: 0 },
-    defaultAssignments: [
-      {
-        siteId: 'site-1',
-        type: 'HOURLY',
-        startDate: '2024-01-01',
-        schedule: { mon: 4, tue: 4, wed: 4, thu: 4, fri: 4, sat: 0, sun: 0 }
-      },
-      {
-        siteId: 'site-4',
-        type: 'HOURLY',
-        startDate: '2024-01-01',
-        schedule: { mon: 4, tue: 4, wed: 4, thu: 4, fri: 4, sat: 0, sun: 0 }
-      }
-    ]
-  },
-  {
-    id: 'emp-2',
-    firstName: 'Luigi',
-    lastName: 'Verdi',
-    hourlyRate: 11.00,
-    contractHours: { mon: 4, tue: 4, wed: 4, thu: 4, fri: 4, sat: 0, sun: 0 },
-    defaultAssignments: [
-      {
-        siteId: 'site-2',
-        type: 'FORFAIT',
-        forfaitAmount: 500,
-        startDate: '2024-01-01',
-        schedule: { mon: 2, tue: 2, wed: 2, thu: 2, fri: 2, sat: 0, sun: 0 }
-      },
-      {
-        siteId: 'site-5',
-        type: 'HOURLY',
-        startDate: '2024-01-01',
-        schedule: { mon: 2, tue: 2, wed: 2, thu: 2, fri: 2, sat: 0, sun: 0 }
-      }
-    ]
-  },
-  {
-    id: 'emp-3',
-    firstName: 'Giovanna',
-    lastName: 'Bianchi',
-    hourlyRate: 13.00,
-    contractHours: { mon: 5, tue: 5, wed: 5, thu: 5, fri: 5, sat: 5, sun: 0 },
-    defaultAssignments: [
-      {
-        siteId: 'site-3',
-        type: 'HOURLY',
-        startDate: '2024-01-01',
-        schedule: { mon: 5, tue: 5, wed: 5, thu: 5, fri: 5, sat: 5, sun: 0 }
-      }
-    ]
-  }
+  { id: 'emp-1', firstName: 'RITA', lastName: 'GUALTIERI', hourlyRate: 10.00, contractHours: { mon: 0, tue: 0, wed: 0, thu: 0, fri: 0, sat: 0, sun: 0 }, defaultAssignments: [] },
+  { id: 'emp-2', firstName: 'MARIA', lastName: 'BRUNO', hourlyRate: 10.00, contractHours: { mon: 0, tue: 0, wed: 0, thu: 0, fri: 0, sat: 0, sun: 0 }, defaultAssignments: [] },
+  { id: 'emp-3', firstName: 'MENA', lastName: 'AUSILIO', hourlyRate: 10.00, contractHours: { mon: 0, tue: 0, wed: 0, thu: 0, fri: 0, sat: 0, sun: 0 }, defaultAssignments: [] },
+  { id: 'emp-4', firstName: 'COSTANTIN', lastName: 'MAXIN', hourlyRate: 10.00, contractHours: { mon: 0, tue: 0, wed: 0, thu: 0, fri: 0, sat: 0, sun: 0 }, defaultAssignments: [] },
+  { id: 'emp-5', firstName: 'MARINETA', lastName: 'PARFENE', hourlyRate: 10.00, contractHours: { mon: 0, tue: 0, wed: 0, thu: 0, fri: 0, sat: 0, sun: 0 }, defaultAssignments: [] },
+  { id: 'emp-6', firstName: 'LOREDANA', lastName: 'VLAD', hourlyRate: 10.00, contractHours: { mon: 0, tue: 0, wed: 0, thu: 0, fri: 0, sat: 0, sun: 0 }, defaultAssignments: [] },
+  { id: 'emp-7', firstName: 'AYAN FATIMA', lastName: 'BAYDEL', hourlyRate: 10.00, contractHours: { mon: 0, tue: 0, wed: 0, thu: 0, fri: 0, sat: 0, sun: 0 }, defaultAssignments: [] },
+  { id: 'emp-8', firstName: 'LUIJETTA', lastName: 'DERVISHI', hourlyRate: 10.00, contractHours: { mon: 0, tue: 0, wed: 0, thu: 0, fri: 0, sat: 0, sun: 0 }, defaultAssignments: [] },
+  { id: 'emp-9', firstName: 'MAJLINDA', lastName: 'GJINI', hourlyRate: 10.00, contractHours: { mon: 0, tue: 0, wed: 0, thu: 0, fri: 0, sat: 0, sun: 0 }, defaultAssignments: [] },
+  { id: 'emp-10', firstName: 'TERRONES', lastName: 'REYNALDO', hourlyRate: 10.00, contractHours: { mon: 0, tue: 0, wed: 0, thu: 0, fri: 0, sat: 0, sun: 0 }, defaultAssignments: [] },
+  { id: 'emp-11', firstName: 'ESTER', lastName: 'FELISARI', hourlyRate: 10.00, contractHours: { mon: 0, tue: 0, wed: 0, thu: 0, fri: 0, sat: 0, sun: 0 }, defaultAssignments: [] },
+  { id: 'emp-12', firstName: 'SAIDA', lastName: 'KOUISSTOV', hourlyRate: 10.00, contractHours: { mon: 0, tue: 0, wed: 0, thu: 0, fri: 0, sat: 0, sun: 0 }, defaultAssignments: [] },
+  { id: 'emp-13', firstName: 'GIUSY', lastName: 'ZINDATO', hourlyRate: 10.00, contractHours: { mon: 0, tue: 0, wed: 0, thu: 0, fri: 0, sat: 0, sun: 0 }, defaultAssignments: [] },
+  { id: 'emp-14', firstName: 'PENTASSUGLIA', lastName: 'DEMIS', hourlyRate: 10.00, contractHours: { mon: 0, tue: 0, wed: 0, thu: 0, fri: 0, sat: 0, sun: 0 }, defaultAssignments: [] },
+  { id: 'emp-15', firstName: 'CECILIA', lastName: 'LUPU', hourlyRate: 10.00, contractHours: { mon: 0, tue: 0, wed: 0, thu: 0, fri: 0, sat: 0, sun: 0 }, defaultAssignments: [] },
+  { id: 'emp-16', firstName: 'SARA', lastName: 'CONFALONIERI', hourlyRate: 10.00, contractHours: { mon: 0, tue: 0, wed: 0, thu: 0, fri: 0, sat: 0, sun: 0 }, defaultAssignments: [] },
+  { id: 'emp-17', firstName: 'AMAYA', lastName: 'SANTIAGO', hourlyRate: 10.00, contractHours: { mon: 0, tue: 0, wed: 0, thu: 0, fri: 0, sat: 0, sun: 0 }, defaultAssignments: [] },
+  { id: 'emp-18', firstName: 'FRANCESCA', lastName: 'CONVERSAZIONI', hourlyRate: 10.00, contractHours: { mon: 0, tue: 0, wed: 0, thu: 0, fri: 0, sat: 0, sun: 0 }, defaultAssignments: [] }
 ];
