@@ -708,7 +708,7 @@ export const MonthlySheet: React.FC<Props> = ({ employees, sites, setEmployees }
 
             cols.push({
                 dayNum: i,
-                dayName: format(currentDay, 'EEE', { locale: it }),
+                dayName: format(currentDay, 'EEEEE', { locale: it }), // 1-letter abbreviation
                 isWeekend: dayOfWeekIndex === 0 || dayOfWeekIndex === 6,
                 isSunday: dayOfWeekIndex === 0,
                 isHoliday: isHoliday,
@@ -1068,7 +1068,7 @@ export const MonthlySheet: React.FC<Props> = ({ employees, sites, setEmployees }
             theme: 'grid',
             styles: {
                 fontSize: 7, // slightly larger font
-                cellPadding: 3, // more padding for taller rows
+                cellPadding: { top: 3, right: 0.5, bottom: 3, left: 0.5 }, // Reduce horizontal padding drastically
                 valign: 'middle',
                 halign: 'center',
                 lineWidth: 0.1,
