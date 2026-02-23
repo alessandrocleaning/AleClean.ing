@@ -75,11 +75,15 @@ export const AuthScreen: React.FC = () => {
             <div className="w-full max-w-sm">
                 {/* Logo */}
                 <div className="text-center mb-8">
-                    <div className="inline-flex items-center mb-2">
-                        <img src="/logo.png" alt="Clean.ing Logo" className="w-20 h-20 object-contain drop-shadow-2xl relative z-10" />
-                        <div className="text-left -ml-1">
+                    <div className="inline-flex items-center gap-3 mb-2">
+                        <img src="/logo.png" alt="Clean.ing Logo" className="w-20 h-20 object-contain drop-shadow-2xl" />
+                        <div className="flex flex-col w-min text-left">
                             <h1 className="font-black text-4xl text-white tracking-tighter leading-none">CLEAN.ING</h1>
-                            <p className="text-blue-200 text-xs font-semibold uppercase tracking-widest mt-1">Management System</p>
+                            <div className="flex justify-between w-full text-blue-200 text-[9px] font-bold uppercase mt-1">
+                                {"MANAGEMENT SYSTEM".split('').map((char, i) => (
+                                    <span key={i}>{char === ' ' ? '\u00A0' : char}</span>
+                                ))}
+                            </div>
                         </div>
                     </div>
                 </div>
