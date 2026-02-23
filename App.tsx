@@ -31,8 +31,8 @@ const AuthWrapper: React.FC = () => {
     return (
       <div className="min-h-screen bg-[#004aad] flex items-center justify-center">
         <div className="text-center text-white">
-          <div className="w-16 h-16 bg-[#ffec09] rounded-2xl flex items-center justify-center text-[#004aad] font-black text-4xl shadow-xl mx-auto mb-4 animate-pulse">
-            C
+          <div className="w-16 h-16 bg-white/10 rounded-2xl flex items-center justify-center p-2 shadow-xl mx-auto mb-4 animate-pulse">
+            <img src="/logo.png" alt="Clean.ing Logo" className="w-full h-full object-contain" />
           </div>
           <div className="w-8 h-8 border-2 border-white/30 border-t-white rounded-full animate-spin mx-auto" />
         </div>
@@ -239,7 +239,9 @@ const App: React.FC<{ user: User }> = ({ user }) => {
       {/* MOBILE HEADER */}
       <div className="md:hidden bg-[#004aad] text-white p-4 flex justify-between items-center shadow-md flex-shrink-0 z-50">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-[#ffec09] rounded flex items-center justify-center text-[#004aad] font-black text-lg">C</div>
+          <div className="w-10 h-10 bg-white/10 rounded-lg flex items-center justify-center p-1.5">
+            <img src="/logo.png" alt="Logo" className="w-full h-full object-contain" />
+          </div>
           <span className="font-bold text-lg">CLEAN.ING</span>
         </div>
         <button onClick={() => setIsSidebarOpen(!isSidebarOpen)}>
@@ -254,8 +256,8 @@ const App: React.FC<{ user: User }> = ({ user }) => {
           ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
       `}>
         <div className="p-6 flex items-center gap-3 border-b border-white/10 hidden md:flex">
-          <div className="w-10 h-10 bg-[#ffec09] rounded-lg flex items-center justify-center text-[#004aad] font-black text-xl shadow-lg transform rotate-3">
-            C
+          <div className="w-12 h-12 bg-white/10 rounded-xl flex items-center justify-center p-2 shadow-lg">
+            <img src="/logo.png" alt="Logo" className="w-full h-full object-contain" />
           </div>
           <div>
             <h1 className="font-black text-2xl tracking-tighter leading-none">CLEAN.ING</h1>
