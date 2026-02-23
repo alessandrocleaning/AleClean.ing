@@ -1035,11 +1035,32 @@ export const MonthlySheet: React.FC<Props> = ({ employees, sites, setEmployees }
         const inputs = clone.querySelectorAll('input');
         inputs.forEach(input => {
             const val = input.value;
-            const parent = input.parentElement;
-            if (parent) {
-                // If it's a time/number input, replace it with text
-                if (input.type === 'number' || input.type === 'time' || input.type === 'text') {
-                    parent.innerHTML = val || '';
+            const cell = input.closest('td');
+            if (cell) {
+                const modeButton = cell.querySelector('button');
+                if (modeButton && (modeButton.textContent === 'Netto' || modeButton.textContent === 'Lordo')) {
+                    if (!val || val === '0') {
+                        cell.innerHTML = '';
+                    } else {
+                        cell.innerHTML = `${val} ${modeButton.textContent}`;
+                    }
+                } else {
+                    const parent = input.parentElement;
+                    if (parent && (input.type === 'number' || input.type === 'time' || input.type === 'text')) {
+                        parent.innerHTML = val || '';
+                    }
+                }
+            }
+        });
+
+        // Ensure employee names have a space between first and last name so they don't stick together
+        const nameCells = clone.querySelectorAll('tbody tr td:first-child');
+        nameCells.forEach(cell => {
+            const nameContainer = cell.querySelector('.flex-col');
+            if (nameContainer) {
+                const spans = nameContainer.querySelectorAll('span');
+                if (spans.length >= 2) {
+                    nameContainer.innerHTML = `${spans[0].textContent} ${spans[1].textContent}`;
                 }
             }
         });

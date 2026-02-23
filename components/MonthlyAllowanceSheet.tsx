@@ -496,9 +496,21 @@ export const MonthlyAllowanceSheet: React.FC<Props> = ({ employees }) => {
         const inputs = clone.querySelectorAll('input');
         inputs.forEach(input => {
             const val = input.value;
-            const parent = input.parentElement;
-            if (parent) {
-                parent.innerHTML = val || '';
+            const cell = input.closest('td');
+            if (cell) {
+                const modeButton = cell.querySelector('button');
+                if (modeButton && (modeButton.textContent === 'Netto' || modeButton.textContent === 'Lordo')) {
+                    if (!val || val === '0') {
+                        cell.innerHTML = '';
+                    } else {
+                        cell.innerHTML = `${val} ${modeButton.textContent}`;
+                    }
+                } else {
+                    const parent = input.parentElement;
+                    if (parent && (input.type === 'number' || input.type === 'time' || input.type === 'text')) {
+                        parent.innerHTML = val || '';
+                    }
+                }
             }
         });
 
