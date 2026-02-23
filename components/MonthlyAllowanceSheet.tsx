@@ -469,39 +469,30 @@ export const MonthlyAllowanceSheet: React.FC<Props> = ({ employees }) => {
             }
         });
 
-        // Ensure the table has border attribute for Excel to recognize it easily
-        const tableEl = clone.querySelector('table') || clone;
-        if (tableEl.tagName === 'TABLE') {
-            tableEl.setAttribute('border', '1');
-        }
+        let csvContent = "";
+        const rows = clone.querySelectorAll('tr');
 
-        // Construct HTML file for Excel with specific styles for borders
-        const htmlContent = `
-        <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
-        <head>
-            <meta http-equiv="content-type" content="application/vnd.ms-excel; charset=UTF-8">
-            <meta charset="UTF-8">
-            <style>
-                body { font-family: Arial, sans-serif; }
-                table { border-collapse: collapse; width: 100%; }
-                th, td { border: 1px solid #000000; padding: 8px; text-align: center; vertical-align: middle; }
-                th { background-color: #15803d; color: white; font-weight: bold; }
-                .text-green-700 { color: #15803d; }
-                .text-red-700 { color: #b91c1c; }
-            </style>
-        </head>
-        <body>
-            ${clone.outerHTML}
-        </body>
-        </html>
-      `;
+        rows.forEach(row => {
+            const cols = row.querySelectorAll('th, td');
+            const rowData: string[] = [];
+
+            cols.forEach(col => {
+                let text = (col as HTMLElement).innerText || col.textContent || "";
+                text = text.replace(/(\r\n|\n|\r)/gm, " ").replace(/\s+/g, ' ').trim();
+
+                const escaped = text.replace(/"/g, '""');
+                rowData.push(`"${escaped}"`);
+            });
+
+            csvContent += rowData.join(";") + "\r\n";
+        });
 
         // Add BOM to Blob
-        const blob = new Blob(['\ufeff', htmlContent], { type: 'application/vnd.ms-excel;charset=utf-8' });
+        const blob = new Blob(['\ufeff', csvContent], { type: 'text/csv;charset=utf-8;' });
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
-        link.download = `Cedolini_${format(currentDate, 'MMMM_yyyy', { locale: it })}.xls`;
+        link.download = `Cedolini_${format(currentDate, 'MMMM_yyyy', { locale: it })}.csv`;
         link.click();
         URL.revokeObjectURL(url);
     };
