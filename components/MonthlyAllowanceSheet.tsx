@@ -511,13 +511,14 @@ export const MonthlyAllowanceSheet: React.FC<Props> = ({ employees }) => {
         autoTable(doc, {
             html: clone,
             theme: 'grid',
+            startY: 20, // Leave space for header
             styles: {
                 fontSize: 7,
-                cellPadding: { top: 3, right: 0.5, bottom: 3, left: 0.5 }, // Reduce horizontal padding drastically
+                cellPadding: { top: 3, right: 0.5, bottom: 3, left: 0.5 },
                 valign: 'middle',
                 halign: 'center',
                 lineWidth: 0.1,
-                lineColor: [200, 200, 200]
+                lineColor: [220, 220, 220]
             },
             headStyles: {
                 fillColor: [21, 128, 61], // #15803d (bg-green-700)
@@ -526,15 +527,57 @@ export const MonthlyAllowanceSheet: React.FC<Props> = ({ employees }) => {
                 fontSize: 7,
                 halign: 'center'
             },
-            columnStyles: {
-                0: { halign: 'left', cellWidth: 45 } // Employee Name wide column
+            alternateRowStyles: {
+                fillColor: [245, 250, 245] // Light green/gray alternating row
             },
-            margin: { top: 10, right: 5, bottom: 10, left: 5 },
+            columnStyles: {
+                0: { halign: 'left', cellWidth: 45 }
+            },
+            margin: { top: 20, right: 5, bottom: 10, left: 5 },
             tableWidth: 'auto',
+            didDrawPage: function (data) {
+                // Header Text
+                doc.setFontSize(16);
+                doc.setTextColor(21, 128, 61); // Green branding for Cedolini
+                doc.setFont("helvetica", "bold");
+                doc.text("CLEAN.ING", data.settings.margin.left, 12);
+
+                doc.setFontSize(10);
+                doc.setTextColor(100, 100, 100);
+                doc.setFont("helvetica", "normal");
+                const rightAlignedX = doc.internal.pageSize.getWidth() - data.settings.margin.right;
+                doc.text(
+                    format(currentDate, 'MMMM yyyy', { locale: it }).toUpperCase(),
+                    rightAlignedX,
+                    12,
+                    { align: 'right' }
+                );
+            },
             didParseCell: function (data) {
-                if (data.cell.text && Array.isArray(data.cell.text)) {
-                    data.cell.text = data.cell.text.map(t => t.trim()).filter(t => t.length > 0);
-                    data.cell.text = [data.cell.text.join(' ')];
+                // Fix header layout for Day columns (D\n1)
+                if (data.section === 'head' && data.cell.text && data.cell.text.length > 0) {
+                    const rawText = data.cell.text.join(' ').trim();
+                    // Regex to find a single letter followed by one or two digits
+                    const match = rawText.match(/^([a-zA-Z])\s*(\d{1,2})$/);
+                    if (match) {
+                        // Put Number on top, Letter on bottom
+                        data.cell.text = [match[2], match[1]];
+                    }
+                }
+
+                // Keep name and surname cleanly spaced
+                if (data.section === 'body' && data.column.index === 0 && data.cell.text) {
+                    if (Array.isArray(data.cell.text)) {
+                        const joined = data.cell.text.map(t => t.trim()).filter(t => t.length > 0).join(' ');
+                        data.cell.text = [joined];
+                    }
+                }
+
+                // Generic cleanup for other cells
+                if (data.section === 'body' && data.column.index !== 0 && data.cell.text) {
+                    if (Array.isArray(data.cell.text)) {
+                        data.cell.text = [data.cell.text.map(t => t.trim()).filter(t => t.length > 0).join(' ')];
+                    }
                 }
             }
         });
