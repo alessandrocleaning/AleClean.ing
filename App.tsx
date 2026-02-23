@@ -31,9 +31,7 @@ const AuthWrapper: React.FC = () => {
     return (
       <div className="min-h-screen bg-[#004aad] flex items-center justify-center">
         <div className="text-center text-white">
-          <div className="w-16 h-16 bg-white/10 rounded-2xl flex items-center justify-center p-2 shadow-xl mx-auto mb-4 animate-pulse">
-            <img src="/logo.png" alt="Clean.ing Logo" className="w-full h-full object-contain" />
-          </div>
+          <img src="/logo.png" alt="Clean.ing Logo" className="w-20 h-20 object-contain drop-shadow-xl mx-auto mb-4 animate-pulse" />
           <div className="w-8 h-8 border-2 border-white/30 border-t-white rounded-full animate-spin mx-auto" />
         </div>
       </div>
@@ -237,11 +235,9 @@ const App: React.FC<{ user: User }> = ({ user }) => {
     <div className="h-screen w-full bg-gray-50 flex flex-col md:flex-row overflow-hidden">
 
       {/* MOBILE HEADER */}
-      <div className="md:hidden bg-[#004aad] text-white p-4 flex justify-between items-center shadow-md flex-shrink-0 z-50">
+      <div className="md:hidden bg-[#004aad] text-white p-4 flex justify-between items-center shadow-md flex-shrink-0 z-50 print:hidden">
         <div className="flex items-center gap-2">
-          <div className="w-10 h-10 bg-white/10 rounded-lg flex items-center justify-center p-1.5">
-            <img src="/logo.png" alt="Logo" className="w-full h-full object-contain" />
-          </div>
+          <img src="/logo.png" alt="Logo" className="w-10 h-10 object-contain drop-shadow-md" />
           <span className="font-bold text-lg">CLEAN.ING</span>
         </div>
         <button onClick={() => setIsSidebarOpen(!isSidebarOpen)}>
@@ -252,13 +248,11 @@ const App: React.FC<{ user: User }> = ({ user }) => {
       {/* SIDEBAR / NAV */}
       <nav className={`
           bg-[#004aad] text-white w-64 flex-shrink-0 flex flex-col 
-          fixed md:relative inset-y-0 left-0 z-40 shadow-xl transition-transform duration-300 md:translate-x-0
+          fixed md:relative inset-y-0 left-0 z-40 shadow-xl transition-transform duration-300 md:translate-x-0 print:hidden
           ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
       `}>
         <div className="p-6 flex items-center gap-3 border-b border-white/10 hidden md:flex">
-          <div className="w-12 h-12 bg-white/10 rounded-xl flex items-center justify-center p-2 shadow-lg">
-            <img src="/logo.png" alt="Logo" className="w-full h-full object-contain" />
-          </div>
+          <img src="/logo.png" alt="Logo" className="w-14 h-14 object-contain drop-shadow-md" />
           <div>
             <h1 className="font-black text-2xl tracking-tighter leading-none">CLEAN.ING</h1>
             <p className="text-xs text-blue-200 opacity-80 font-medium">MANAGEMENT SYSTEM</p>
