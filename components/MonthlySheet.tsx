@@ -978,22 +978,57 @@ export const MonthlySheet: React.FC<Props> = ({ employees, sites, setEmployees }
         if (!table) return;
 
         const clone = table.cloneNode(true) as HTMLElement;
-        const originalInputs = table.querySelectorAll('input');
-        const clonedInputs = clone.querySelectorAll('input');
-        originalInputs.forEach((input, index) => {
-            if (clonedInputs[index]) {
-                const val = input.value;
-                const span = document.createElement('span');
-                span.textContent = val;
-                span.style.fontWeight = 'bold';
-                clonedInputs[index].parentNode?.replaceChild(span, clonedInputs[index]);
+
+        // Clean up inputs and labels in the cloned table for Excel
+        const inputs = clone.querySelectorAll('input');
+        inputs.forEach(input => {
+            const val = input.value;
+            const cell = input.closest('td');
+            if (cell) {
+                const modeButton = cell.querySelector('button');
+                if (modeButton && (modeButton.textContent === 'Netto' || modeButton.textContent === 'Lordo')) {
+                    if (!val || val === '0') {
+                        cell.innerHTML = '';
+                    } else {
+                        cell.innerHTML = `<span style="font-weight:bold">${val}</span> ${modeButton.textContent}`;
+                    }
+                } else {
+                    const parent = input.parentElement;
+                    if (parent && (input.type === 'number' || input.type === 'time' || input.type === 'text')) {
+                        parent.innerHTML = `<span style="font-weight:bold">${val || ''}</span>`;
+                    }
+                }
             }
         });
-        const buttons = clone.querySelectorAll('button');
-        buttons.forEach(btn => btn.remove());
 
+        // Ensure employee names have a space between first and last name
+        const nameCells = clone.querySelectorAll('tbody tr td:first-child');
+        nameCells.forEach(cell => {
+            const nameContainer = cell.querySelector('.flex-col');
+            if (nameContainer) {
+                const spans = nameContainer.querySelectorAll('span');
+                if (spans.length >= 2) {
+                    nameContainer.innerHTML = `${spans[0].textContent} ${spans[1].textContent}`;
+                }
+            }
+        });
+
+        // Remove the extra job buttons and expansion controls
+        const cleanupSelectors = ['.lucide-plus', '.lucide-chevron-down', '.lucide-chevron-up', '.lucide-clock', '.lucide-lock', '.lucide-unlock', '.lucide-trash-2'];
+        cleanupSelectors.forEach(selector => {
+            const elements = clone.querySelectorAll(selector);
+            elements.forEach(el => {
+                const btnContainer = el.closest('button');
+                if (btnContainer) btnContainer.remove();
+                else el.remove();
+            });
+        });
+
+        // Ensure the table has border attribute for Excel to recognize it easily
         const tableEl = clone.querySelector('table') || clone;
-        if (tableEl.tagName === 'TABLE') tableEl.setAttribute('border', '1');
+        if (tableEl.tagName === 'TABLE') {
+            tableEl.setAttribute('border', '1');
+        }
 
         const htmlContent = `
         <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
@@ -1107,7 +1142,7 @@ export const MonthlySheet: React.FC<Props> = ({ employees, sites, setEmployees }
                 fillColor: [245, 248, 252] // Light blue/gray alternating row
             },
             columnStyles: {
-                0: { halign: 'left', cellWidth: 45 }
+                0: { halign: 'left', cellWidth: 45, cellPadding: { left: 4, top: 3, bottom: 3, right: 0.5 } }
             },
             margin: { top: 20, right: 5, bottom: 10, left: 5 },
             tableWidth: 'auto',

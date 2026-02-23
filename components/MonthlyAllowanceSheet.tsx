@@ -435,17 +435,37 @@ export const MonthlyAllowanceSheet: React.FC<Props> = ({ employees }) => {
 
         const clone = table.cloneNode(true) as HTMLElement;
 
-        // Replace inputs with spans
-        const originalInputs = table.querySelectorAll('input');
-        const clonedInputs = clone.querySelectorAll('input');
+        // Clean up inputs and labels in the cloned table for Excel
+        const inputs = clone.querySelectorAll('input');
+        inputs.forEach(input => {
+            const val = input.value;
+            const cell = input.closest('td');
+            if (cell) {
+                const modeButton = cell.querySelector('button');
+                if (modeButton && (modeButton.textContent === 'Netto' || modeButton.textContent === 'Lordo')) {
+                    if (!val || val === '0') {
+                        cell.innerHTML = '';
+                    } else {
+                        cell.innerHTML = `<span style="font-weight:bold">${val}</span> ${modeButton.textContent}`;
+                    }
+                } else {
+                    const parent = input.parentElement;
+                    if (parent && (input.type === 'number' || input.type === 'time' || input.type === 'text')) {
+                        parent.innerHTML = `<span style="font-weight:bold">${val || ''}</span>`;
+                    }
+                }
+            }
+        });
 
-        originalInputs.forEach((input, index) => {
-            if (clonedInputs[index]) {
-                const val = input.value;
-                const span = document.createElement('span');
-                span.textContent = val;
-                span.style.fontWeight = 'bold';
-                clonedInputs[index].parentNode?.replaceChild(span, clonedInputs[index]);
+        // Ensure employee names have a space between first and last name
+        const nameCells = clone.querySelectorAll('tbody tr td:first-child');
+        nameCells.forEach(cell => {
+            const nameContainer = cell.querySelector('.flex-col');
+            if (nameContainer) {
+                const spans = nameContainer.querySelectorAll('span');
+                if (spans.length >= 2) {
+                    nameContainer.innerHTML = `${spans[0].textContent} ${spans[1].textContent}`;
+                }
             }
         });
 
@@ -543,7 +563,7 @@ export const MonthlyAllowanceSheet: React.FC<Props> = ({ employees }) => {
                 fillColor: [245, 250, 245] // Light green/gray alternating row
             },
             columnStyles: {
-                0: { halign: 'left', cellWidth: 45 }
+                0: { halign: 'left', cellWidth: 45, cellPadding: { left: 4, top: 3, bottom: 3, right: 0.5 } }
             },
             margin: { top: 20, right: 5, bottom: 10, left: 5 },
             tableWidth: 'auto',
