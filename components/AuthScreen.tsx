@@ -77,7 +77,7 @@ export const AuthScreen: React.FC = () => {
                 <div className="text-center mb-8">
                     <div className="inline-flex items-center mb-2">
                         <img src="/logo.png" alt="Clean.ing Logo" className="w-20 h-20 object-contain drop-shadow-2xl relative z-10" />
-                        <div className="text-left -ml-4">
+                        <div className="text-left -ml-1">
                             <h1 className="font-black text-4xl text-white tracking-tighter leading-none">CLEAN.ING</h1>
                             <p className="text-blue-200 text-xs font-semibold uppercase tracking-widest mt-1">Management System</p>
                         </div>

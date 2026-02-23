@@ -238,7 +238,7 @@ const App: React.FC<{ user: User }> = ({ user }) => {
       <div className="md:hidden bg-[#004aad] text-white p-4 flex justify-between items-center shadow-md flex-shrink-0 z-50 print:hidden">
         <div className="flex items-center">
           <img src="/logo.png" alt="Logo" className="w-10 h-10 object-contain drop-shadow-md relative z-10" />
-          <span className="font-bold text-lg -ml-2">CLEAN.ING</span>
+          <span className="font-bold text-lg -ml-0.5">CLEAN.ING</span>
         </div>
         <button onClick={() => setIsSidebarOpen(!isSidebarOpen)}>
           {isSidebarOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
@@ -253,7 +253,7 @@ const App: React.FC<{ user: User }> = ({ user }) => {
       `}>
         <div className="p-6 flex items-center border-b border-white/10 hidden md:flex">
           <img src="/logo.png" alt="Logo" className="w-14 h-14 object-contain drop-shadow-md relative z-10" />
-          <div className="-ml-3">
+          <div className="-ml-1">
             <h1 className="font-black text-2xl tracking-tighter leading-none">CLEAN.ING</h1>
             <p className="text-xs text-blue-200 opacity-80 font-medium tracking-wide">MANAGEMENT SYSTEM</p>
           </div>
