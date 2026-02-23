@@ -1067,8 +1067,8 @@ export const MonthlySheet: React.FC<Props> = ({ employees, sites, setEmployees }
             html: clone,
             theme: 'grid',
             styles: {
-                fontSize: 6, // small font to fit the large width
-                cellPadding: 0.5,
+                fontSize: 7, // slightly larger font
+                cellPadding: 3, // more padding for taller rows
                 valign: 'middle',
                 halign: 'center',
                 lineWidth: 0.1,
@@ -1078,11 +1078,11 @@ export const MonthlySheet: React.FC<Props> = ({ employees, sites, setEmployees }
                 fillColor: [0, 74, 173], // #004aad
                 textColor: 255,
                 fontStyle: 'bold',
-                fontSize: 6,
+                fontSize: 7,
                 halign: 'center'
             },
             columnStyles: {
-                0: { halign: 'left', cellWidth: 25 } // Employee Name column slightly wider
+                0: { halign: 'left', cellWidth: 45 } // Employee Name column much wider
             },
             margin: { top: 10, right: 5, bottom: 10, left: 5 },
             tableWidth: 'auto',
