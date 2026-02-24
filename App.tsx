@@ -322,19 +322,6 @@ const App: React.FC<{ user: User; isAdmin: boolean }> = ({ user, isAdmin }) => {
             <Wallet className="w-5 h-5" /> Cedolini
           </button>
 
-          {/* PULSANTE RESET DATI */}
-          <button
-            onClick={() => {
-              if (window.confirm('⚠️ ATTENZIONE: Sei sicuro di voler ELIMINARE TUTTI I DIPENDENTI E CANTIERI del tuo account? Questa operazione è irreversibile.')) {
-                setEmployees([]);
-                setSites([]);
-                alert('Tutti i dati sono stati eliminati correttamente da Firestore.');
-              }
-            }}
-            className="w-full mt-2 text-left px-4 py-3 rounded-lg flex items-center gap-3 font-semibold transition-all hover:bg-red-500/20 text-red-300 border border-red-500/30 group"
-          >
-            <X className="w-5 h-5 group-hover:text-red-400" /> <span className="text-sm">Azzera Dati Account</span>
-          </button>
         </div>
 
         <div className="p-4 border-t border-white/10 hidden md:flex flex-col gap-2">
