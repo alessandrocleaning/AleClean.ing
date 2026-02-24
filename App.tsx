@@ -442,7 +442,7 @@ const App: React.FC<{ user: User; isAdmin: boolean }> = ({ user, isAdmin }) => {
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
                 {/* CHART: CITY DISTRIBUTION */}
-                <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 lg:col-span-1 flex flex-col h-[350px]">
+                <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 lg:col-span-1 flex flex-col h-[420px]">
                   <div className="flex items-center gap-3 mb-2 flex-shrink-0">
                     <div className="p-2 bg-gray-100 rounded-lg"><PieChartIcon className="w-5 h-5 text-gray-600" /></div>
                     <h3 className="font-bold text-gray-800 text-lg leading-tight">Distribuzione Appalti <br /><span className="text-xs font-normal text-gray-500">per Città (Sedi Lavorative)</span></h3>
@@ -455,9 +455,9 @@ const App: React.FC<{ user: User; isAdmin: boolean }> = ({ user, isAdmin }) => {
                           <Pie
                             data={stats.pieData}
                             cx="50%"
-                            cy="50%"
-                            innerRadius={50}
-                            outerRadius={80}
+                            cy="45%"
+                            innerRadius={45}
+                            outerRadius={70}
                             paddingAngle={5}
                             dataKey="value"
                           >
@@ -470,12 +470,12 @@ const App: React.FC<{ user: User; isAdmin: boolean }> = ({ user, isAdmin }) => {
                             itemStyle={{ color: '#374151' }}
                           />
                           <Legend
-                            layout="vertical"
-                            verticalAlign="middle"
-                            align="right"
+                            layout="horizontal"
+                            verticalAlign="bottom"
+                            align="center"
                             iconType="circle"
                             iconSize={8}
-                            wrapperStyle={{ fontSize: '11px', fontWeight: '600' }}
+                            wrapperStyle={{ fontSize: '11px', fontWeight: '600', paddingTop: '8px' }}
                           />
                         </PieChart>
                       </ResponsiveContainer>
