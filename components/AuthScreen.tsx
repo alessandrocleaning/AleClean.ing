@@ -11,6 +11,8 @@ import { Mail, Lock, ArrowRight, AlertCircle, CheckCircle } from 'lucide-react';
 
 type AuthMode = 'login' | 'register' | 'reset';
 
+const AUTHORIZED_EMAIL = 'alessandro.clean.ing@gmail.com';
+
 export const AuthScreen: React.FC = () => {
     const [mode, setMode] = useState<AuthMode>('login');
     const [email, setEmail] = useState('');
@@ -37,6 +39,12 @@ export const AuthScreen: React.FC = () => {
         e.preventDefault();
         setError('');
         setSuccess('');
+
+        if (mode !== 'reset' && email.toLowerCase() !== AUTHORIZED_EMAIL) {
+            setError('Accesso non autorizzato. Questa app è riservata all\'account aziendale.');
+            return;
+        }
+
         setLoading(true);
         try {
             if (mode === 'login') {
@@ -60,7 +68,13 @@ export const AuthScreen: React.FC = () => {
         setLoading(true);
         try {
             const provider = new GoogleAuthProvider();
-            await signInWithPopup(auth, provider);
+            const result = await signInWithPopup(auth, provider);
+            // Blocco immediato se l'email Google non è quella autorizzata
+            if (result.user.email?.toLowerCase() !== AUTHORIZED_EMAIL) {
+                await result.user.delete().catch(() => { });
+                import('../lib/firebase').then(({ auth: a }) => import('firebase/auth').then(({ signOut }) => signOut(a)));
+                setError('Accesso non autorizzato. Questa app è riservata all\'account aziendale.');
+            }
         } catch (err: any) {
             if (err.code !== 'auth/popup-closed-by-user') {
                 setError(translateError(err.code));

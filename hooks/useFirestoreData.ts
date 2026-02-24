@@ -13,8 +13,9 @@ import {
     loadMonthlyData,
     saveMonthlyData,
     migrateFromLocalStorage,
+    checkAndWipeOldData,
 } from '../lib/firestore';
-import { SEED_EMPLOYEES, SEED_SITES } from '../data/seedData';
+// Nessun seed data: gli utenti nuovi partono con liste vuote
 
 // Helper: sanitize employees (copiato da App.tsx per indipendenza del hook)
 const sanitize = (emp: any): Employee => ({
@@ -55,7 +56,7 @@ interface UseFirestoreDataResult {
     triggerMigration: () => Promise<void>;
 }
 
-export const useFirestoreData = (user: User): UseFirestoreDataResult => {
+export const useFirestoreData = (user: User, isAdmin: boolean): UseFirestoreDataResult => {
     const [employees, setEmployeesState] = useState<Employee[]>([]);
     const [sites, setSitesState] = useState<Site[]>([]);
     const [syncStatus, setSyncStatus] = useState<SyncStatus>('loading');
@@ -80,13 +81,18 @@ export const useFirestoreData = (user: User): UseFirestoreDataResult => {
 
         const load = async () => {
             try {
+                if (!isAdmin) {
+                    await checkAndWipeOldData(user.uid);
+                }
+
                 const [emps, stes] = await Promise.all([
                     loadEmployees(user.uid),
                     loadSites(user.uid),
                 ]);
 
-                setEmployeesState(emps.length > 0 ? emps.map(sanitize) : SEED_EMPLOYEES);
-                setSitesState(stes.length > 0 ? stes : SEED_SITES);
+                // Ogni utente parte con i propri dati (vuoti per i nuovi account)
+                setEmployeesState(emps.map(sanitize));
+                setSitesState(stes);
                 setSyncStatus('synced');
             } catch (e) {
                 console.error('Errore caricamento dati:', e);

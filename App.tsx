@@ -5,16 +5,19 @@ import { SiteManager } from './components/SiteManager';
 import { MonthlySheet } from './components/MonthlySheet';
 import { MonthlyAllowanceSheet } from './components/MonthlyAllowanceSheet';
 import { AuthScreen } from './components/AuthScreen';
-import { Users, FileText, LayoutDashboard, MapPin, Menu, X, Wallet, Building2, TrendingUp, TrendingDown, BarChart3, Activity, PieChart as PieChartIcon, LogOut, Cloud, CloudOff, Loader, Upload } from 'lucide-react';
-import { SEED_EMPLOYEES, SEED_SITES } from './data/seedData';
+import { Users, FileText, LayoutDashboard, MapPin, Menu, X, Wallet, Building2, TrendingUp, TrendingDown, BarChart3, Activity, PieChart as PieChartIcon, LogOut, Cloud, CloudOff, Loader } from 'lucide-react';
+// (Nessun seed data — ogni utente parte con dati vuoti)
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { subMonths, format } from 'date-fns';
 import { onAuthStateChanged, signOut, User } from 'firebase/auth';
 import { auth } from './lib/firebase';
 import { useFirestoreData } from './hooks/useFirestoreData';
 
+
+// ─── EMAIL UNICA AUTORIZZATA ───────────────────────────────────────────────
+const AUTHORIZED_EMAIL = 'alessandro.clean.ing@gmail.com';
+
 // ─── AUTH WRAPPER ──────────────────────────────────────────────────────────
-// Questo componente gestisce: stato login, loading iniziale, e poi l'app vera.
 const AuthWrapper: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
@@ -39,36 +42,50 @@ const AuthWrapper: React.FC = () => {
   }
 
   if (!user) return <AuthScreen />;
-  return <App user={user} />;
+
+  // Blocca tutti tranne l'email autorizzata
+  if (user.email?.toLowerCase() !== AUTHORIZED_EMAIL) {
+    return (
+      <div className="min-h-screen bg-[#004aad] flex items-center justify-center p-4">
+        <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-sm w-full text-center">
+          <img src="/logo.png" alt="Logo" className="w-16 h-16 object-contain mx-auto mb-4" />
+          <div className="w-14 h-14 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <X className="w-7 h-7 text-red-500" />
+          </div>
+          <h2 className="text-xl font-black text-gray-800 mb-2">Accesso Negato</h2>
+          <p className="text-sm text-gray-500 mb-6">
+            Questa applicazione è riservata esclusivamente all'account autorizzato.
+          </p>
+          <p className="text-xs text-gray-400 bg-gray-50 rounded-lg px-3 py-2 mb-6 font-mono break-all">{user.email}</p>
+          <button
+            onClick={() => signOut(auth)}
+            className="w-full bg-[#004aad] text-white font-bold py-3 rounded-xl hover:bg-blue-700 transition-colors"
+          >
+            Esci e cambia account
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Solo l'admin autorizzato
+  return <App user={user} isAdmin={true} />;
 };
+
 
 const CHART_COLORS = ['#004aad', '#fbbf24', '#10b981', '#f97316', '#8b5cf6', '#ec4899', '#6366f1', '#64748b'];
 
-const App: React.FC<{ user: User }> = ({ user }) => {
+const App: React.FC<{ user: User; isAdmin: boolean }> = ({ user, isAdmin }) => {
   const [view, setView] = useState<ViewMode>('dashboard');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [showMigrationBanner, setShowMigrationBanner] = useState(false);
-
-  // ─── Firestore Data Hook (sostituisce localStorage) ───────────────────────
+  // ─── Firestore Data Hook ───────────────────────────────────────────────────
   const {
     employees,
     setEmployees,
     sites,
     setSites,
     syncStatus,
-    hasMigratableData,
-    triggerMigration,
-  } = useFirestoreData(user);
-
-  // Mostra banner migrazione se ci sono dati locali
-  useEffect(() => {
-    if (hasMigratableData) setShowMigrationBanner(true);
-  }, [hasMigratableData]);
-
-  const handleMigrate = async () => {
-    await triggerMigration();
-    setShowMigrationBanner(false);
-  };
+  } = useFirestoreData(user, isAdmin);
 
   const handleLogout = async () => {
     await signOut(auth);
@@ -304,6 +321,20 @@ const App: React.FC<{ user: User }> = ({ user }) => {
           >
             <Wallet className="w-5 h-5" /> Cedolini
           </button>
+
+          {/* PULSANTE RESET DATI */}
+          <button
+            onClick={() => {
+              if (window.confirm('⚠️ ATTENZIONE: Sei sicuro di voler ELIMINARE TUTTI I DIPENDENTI E CANTIERI del tuo account? Questa operazione è irreversibile.')) {
+                setEmployees([]);
+                setSites([]);
+                alert('Tutti i dati sono stati eliminati correttamente da Firestore.');
+              }
+            }}
+            className="w-full mt-2 text-left px-4 py-3 rounded-lg flex items-center gap-3 font-semibold transition-all hover:bg-red-500/20 text-red-300 border border-red-500/30 group"
+          >
+            <X className="w-5 h-5 group-hover:text-red-400" /> <span className="text-sm">Azzera Dati Account</span>
+          </button>
         </div>
 
         <div className="p-4 border-t border-white/10 hidden md:flex flex-col gap-2">
@@ -339,28 +370,6 @@ const App: React.FC<{ user: User }> = ({ user }) => {
           </div>
         )}
 
-        {/* MIGRATION BANNER */}
-        {showMigrationBanner && (
-          <div className="bg-amber-50 border-b border-amber-200 px-4 py-3 flex items-center justify-between gap-3">
-            <p className="text-xs text-amber-800 font-medium">
-              📦 Trovati dati locali dal browser. Vuoi trasferirli nel cloud?
-            </p>
-            <div className="flex items-center gap-2 flex-shrink-0">
-              <button
-                onClick={handleMigrate}
-                className="flex items-center gap-1.5 bg-amber-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-amber-700 transition-colors"
-              >
-                <Upload className="w-3 h-3" /> Importa
-              </button>
-              <button
-                onClick={() => setShowMigrationBanner(false)}
-                className="text-amber-500 hover:text-amber-700 text-xs"
-              >
-                Ignora
-              </button>
-            </div>
-          </div>
-        )}
 
         <div className="p-4 md:p-8 w-full min-h-full animate-fade-in-up">
 

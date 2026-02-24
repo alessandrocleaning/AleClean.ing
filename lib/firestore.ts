@@ -6,9 +6,84 @@ import {
     doc,
     getDoc,
     setDoc,
+    collection,
+    query,
+    where,
+    onSnapshot,
+    serverTimestamp,
+    Unsubscribe,
 } from 'firebase/firestore';
 import { db } from './firebase';
 import { Employee, Site, MonthlyData } from '../types';
+
+// ─── EMAIL ACCOUNT PRINCIPALE ────────────────────────────────────────────────
+export const ADMIN_EMAIL = 'alessandro.clean.ing@gmail.com';
+
+// ─── TIPI RICHIESTA ACCESSO ──────────────────────────────────────────────────
+export type AccessStatus = 'admin' | 'approved' | 'pending' | 'none';
+
+export interface AccessRequest {
+    userId: string;
+    email: string;
+    name: string;
+    company: string;
+    message: string;
+    status: 'pending' | 'approved' | 'rejected';
+    createdAt: any;
+}
+
+// ─── ACCESS CONTROL ──────────────────────────────────────────────────────────
+
+/**
+ * Controlla se un utente ha accesso all'app.
+ * Ritorna: 'admin' | 'approved' | 'pending' | 'none'
+ */
+export const checkUserAccess = async (userId: string, email: string): Promise<AccessStatus> => {
+    if (email.toLowerCase() === ADMIN_EMAIL) return 'admin';
+    const snap = await getDoc(doc(db, 'accessRequests', userId));
+    if (!snap.exists()) return 'none';
+    const data = snap.data() as AccessRequest;
+    if (data.status === 'approved') return 'approved';
+    return 'pending';
+};
+
+/**
+ * Invia una richiesta di accesso all'app.
+ */
+export const submitAccessRequest = async (
+    userId: string,
+    email: string,
+    name: string,
+    company: string,
+    message: string
+): Promise<void> => {
+    await setDoc(doc(db, 'accessRequests', userId), {
+        userId,
+        email,
+        name,
+        company,
+        message,
+        status: 'pending',
+        createdAt: serverTimestamp(),
+    });
+};
+
+/**
+ * Sottoscrive in tempo reale al conteggio delle richieste pendenti.
+ * Usato dall'admin per le notifiche.
+ */
+export const subscribeToAccessRequests = (
+    onUpdate: (pendingCount: number, requests: AccessRequest[]) => void
+): Unsubscribe => {
+    const q = query(
+        collection(db, 'accessRequests'),
+        where('status', '==', 'pending')
+    );
+    return onSnapshot(q, (snapshot) => {
+        const requests = snapshot.docs.map(d => d.data() as AccessRequest);
+        onUpdate(requests.length, requests);
+    });
+};
 
 
 // ─── EMPLOYEES ─────────────────────────────────────────────────────────────
@@ -100,3 +175,32 @@ export const migrateFromLocalStorage = async (userId: string): Promise<boolean> 
         return false;
     }
 };
+
+// Numero versione corrente del wipe — incrementalo per forzare un nuovo wipe su tutti gli account
+const WIPE_VERSION = 1;
+
+/**
+ * Controlla se l'account non-admin è già stato azzerato con la versione attuale.
+ * Se la versione nel DB è inferiore a WIPE_VERSION, svuota dipendenti e cantieri.
+ */
+export const checkAndWipeOldData = async (userId: string): Promise<boolean> => {
+    try {
+        const wipeRef = doc(db, 'users', userId, 'data', 'wipe_marker');
+        const snap = await getDoc(wipeRef);
+        const currentVersion: number = snap.exists() ? (snap.data()?.version ?? 0) : 0;
+
+        if (currentVersion < WIPE_VERSION) {
+            // Svuota dipendenti e cantieri
+            await setDoc(doc(db, 'users', userId, 'data', 'employees'), { list: [] });
+            await setDoc(doc(db, 'users', userId, 'data', 'sites'), { list: [] });
+            // Aggiorna il marcatore con la versione corrente
+            await setDoc(wipeRef, { version: WIPE_VERSION, wipedAt: serverTimestamp() });
+            return true;
+        }
+        return false;
+    } catch (e) {
+        console.error('Errore durante il wipe dei dati:', e);
+        return false;
+    }
+};
+
