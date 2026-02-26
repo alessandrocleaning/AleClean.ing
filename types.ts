@@ -1,4 +1,5 @@
 
+export type SiteCategory = 'Condominio' | 'Azienda' | 'Ristorante' | 'Scuola' | 'Farmacia' | 'Privato';
 
 export interface Site {
   id: string;
@@ -6,6 +7,7 @@ export interface Site {
   address?: string;
   city?: string;
   netMonthlyRevenue?: number;
+  category?: SiteCategory;
 }
 
 export type DayKey = 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun';

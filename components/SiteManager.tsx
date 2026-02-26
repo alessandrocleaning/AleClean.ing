@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Site, Employee } from '../types';
-import { MapPin, Plus, Trash2, GripVertical, Pencil, Check, X, Building2, Map, Search, Users, Euro } from 'lucide-react';
+import { Site, Employee, SiteCategory } from '../types';
+import { MapPin, Plus, Trash2, GripVertical, Pencil, Check, X, Building2, Map, Search, Users, Euro, Tag } from 'lucide-react';
 
 interface Props {
     sites: Site[];
@@ -8,6 +8,17 @@ interface Props {
     employees: Employee[];
     setEmployees: (e: Employee[]) => void;
 }
+
+const CATEGORY_COLORS: Record<SiteCategory, { bg: string, border: string, text: string, listBg: string, listBorder: string }> = {
+    'Condominio': { bg: 'bg-orange-100', border: 'border-orange-200', text: 'text-orange-800', listBg: 'bg-orange-50/50', listBorder: 'border-orange-200' },
+    'Azienda': { bg: 'bg-blue-100', border: 'border-blue-200', text: 'text-blue-800', listBg: 'bg-blue-50/50', listBorder: 'border-blue-200' },
+    'Ristorante': { bg: 'bg-red-100', border: 'border-red-200', text: 'text-red-800', listBg: 'bg-red-50/50', listBorder: 'border-red-200' },
+    'Scuola': { bg: 'bg-purple-100', border: 'border-purple-200', text: 'text-purple-800', listBg: 'bg-purple-50/50', listBorder: 'border-purple-200' },
+    'Farmacia': { bg: 'bg-green-100', border: 'border-green-200', text: 'text-green-800', listBg: 'bg-green-50/50', listBorder: 'border-green-200' },
+    'Privato': { bg: 'bg-sky-100', border: 'border-sky-200', text: 'text-sky-800', listBg: 'bg-sky-50/50', listBorder: 'border-sky-200' }
+};
+
+const CATEGORY_OPTIONS: SiteCategory[] = ['Condominio', 'Azienda', 'Ristorante', 'Scuola', 'Farmacia', 'Privato'];
 
 // --- SUB-COMPONENT: ADD SITE MODAL ---
 const AddSiteModal = ({
@@ -17,12 +28,13 @@ const AddSiteModal = ({
 }: {
     isOpen: boolean;
     onClose: () => void;
-    onSave: (name: string, address: string, city: string, netMonthlyRevenue?: number) => void;
+    onSave: (name: string, address: string, city: string, netMonthlyRevenue?: number, category?: SiteCategory) => void;
 }) => {
     const [name, setName] = useState('');
     const [address, setAddress] = useState('');
     const [city, setCity] = useState('');
     const [netMonthlyRevenue, setNetMonthlyRevenue] = useState('');
+    const [category, setCategory] = useState<SiteCategory | ''>('');
 
     if (!isOpen) return null;
 
@@ -32,11 +44,12 @@ const AddSiteModal = ({
 
         const parsedRevenue = netMonthlyRevenue ? parseFloat(netMonthlyRevenue.replace(',', '.')) : undefined;
 
-        onSave(name, address, city, !parsedRevenue || isNaN(parsedRevenue) ? undefined : parsedRevenue);
+        onSave(name, address, city, !parsedRevenue || isNaN(parsedRevenue) ? undefined : parsedRevenue, category || undefined);
         setName('');
         setAddress('');
         setCity('');
         setNetMonthlyRevenue('');
+        setCategory('');
         onClose();
     };
 
@@ -91,20 +104,36 @@ const AddSiteModal = ({
                         </div>
                     </div>
 
-                    <div className="space-y-1">
-                        <label className="text-xs font-bold text-gray-500 uppercase">Fatturato Netto Mensile (€)</label>
-                        <div className="relative">
-                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                <span className="text-gray-500 font-bold">€</span>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-1">
+                            <label className="text-xs font-bold text-gray-500 uppercase">Fatturato Netto Mensile (€)</label>
+                            <div className="relative">
+                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <span className="text-gray-500 font-bold">€</span>
+                                </div>
+                                <input
+                                    type="number"
+                                    step="0.01"
+                                    value={netMonthlyRevenue}
+                                    onChange={(e) => setNetMonthlyRevenue(e.target.value)}
+                                    placeholder="0.00"
+                                    className="w-full pl-8 p-3 bg-gray-50 border border-gray-200 rounded-lg focus:border-[#004aad] focus:ring-1 focus:ring-[#004aad] outline-none transition-all font-medium"
+                                />
                             </div>
-                            <input
-                                type="number"
-                                step="0.01"
-                                value={netMonthlyRevenue}
-                                onChange={(e) => setNetMonthlyRevenue(e.target.value)}
-                                placeholder="0.00"
-                                className="w-full pl-8 p-3 bg-gray-50 border border-gray-200 rounded-lg focus:border-[#004aad] focus:ring-1 focus:ring-[#004aad] outline-none transition-all font-medium"
-                            />
+                        </div>
+
+                        <div className="space-y-1">
+                            <label className="text-xs font-bold text-gray-500 uppercase">Categoria</label>
+                            <select
+                                value={category}
+                                onChange={(e) => setCategory(e.target.value as SiteCategory | '')}
+                                className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg focus:border-[#004aad] focus:ring-1 focus:ring-[#004aad] outline-none transition-all font-medium text-gray-700"
+                            >
+                                <option value="">Nessuna Categoria</option>
+                                {CATEGORY_OPTIONS.map(cat => (
+                                    <option key={cat} value={cat}>{cat}</option>
+                                ))}
+                            </select>
                         </div>
                     </div>
 
@@ -136,6 +165,7 @@ export const SiteManager: React.FC<Props> = ({ sites, setSites, employees, setEm
     const [editAddress, setEditAddress] = useState('');
     const [editCity, setEditCity] = useState('');
     const [editNetMonthlyRevenue, setEditNetMonthlyRevenue] = useState('');
+    const [editCategory, setEditCategory] = useState<SiteCategory | ''>('');
 
     // Drag State
     const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
@@ -146,7 +176,7 @@ export const SiteManager: React.FC<Props> = ({ sites, setSites, employees, setEm
     // Delete Confirmation State
     const [deleteId, setDeleteId] = useState<string | null>(null);
 
-    const addSite = (name: string, address: string, city: string, netMonthlyRevenue?: number) => {
+    const addSite = (name: string, address: string, city: string, netMonthlyRevenue?: number, category?: SiteCategory) => {
         const trimmedName = name.trim();
         if (!trimmedName) return;
 
@@ -163,7 +193,8 @@ export const SiteManager: React.FC<Props> = ({ sites, setSites, employees, setEm
             name: trimmedName,
             address: address.trim(),
             city: city.trim(),
-            netMonthlyRevenue
+            netMonthlyRevenue,
+            category
         };
 
         setSites([...sites, newSite]);
@@ -188,6 +219,7 @@ export const SiteManager: React.FC<Props> = ({ sites, setSites, employees, setEm
         setEditAddress(site.address || '');
         setEditCity(site.city || '');
         setEditNetMonthlyRevenue(site.netMonthlyRevenue !== undefined ? site.netMonthlyRevenue.toString() : '');
+        setEditCategory(site.category || '');
     };
 
     const saveEdit = () => {
@@ -207,7 +239,8 @@ export const SiteManager: React.FC<Props> = ({ sites, setSites, employees, setEm
             name: editName.trim(),
             address: editAddress.trim(),
             city: editCity.trim(),
-            netMonthlyRevenue: !parsedRevenue || isNaN(parsedRevenue) ? undefined : parsedRevenue
+            netMonthlyRevenue: !parsedRevenue || isNaN(parsedRevenue) ? undefined : parsedRevenue,
+            category: editCategory || undefined
         } : s);
 
         setSites(updatedSites);
@@ -220,6 +253,7 @@ export const SiteManager: React.FC<Props> = ({ sites, setSites, employees, setEm
         setEditAddress('');
         setEditCity('');
         setEditNetMonthlyRevenue('');
+        setEditCategory('');
     };
 
     // --- DRAG LOGIC ---
@@ -248,7 +282,8 @@ export const SiteManager: React.FC<Props> = ({ sites, setSites, employees, setEm
     const filteredSites = sites.filter(s =>
         s.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (s.city && s.city.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (s.address && s.address.toLowerCase().includes(searchTerm.toLowerCase()))
+        (s.address && s.address.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (s.category && s.category.toLowerCase().includes(searchTerm.toLowerCase()))
     );
 
     return (
@@ -315,12 +350,22 @@ export const SiteManager: React.FC<Props> = ({ sites, setSites, employees, setEm
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><Search className="h-4 w-4 text-gray-400" /></div>
                     <input
                         type="text"
-                        placeholder="Cerca cantiere..."
+                        placeholder="Cerca cantiere o categoria..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                         className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-lg leading-5 bg-gray-50 placeholder-gray-400 focus:outline-none focus:border-[#004aad] focus:ring-1 focus:ring-[#004aad] sm:text-sm transition-colors"
                     />
                 </div>
+            </div>
+
+            {/* CATEGORY LEGEND */}
+            <div className="flex flex-wrap items-center gap-2">
+                <span className="text-xs font-bold text-gray-400 uppercase mr-2 flex items-center gap-1"><Tag className="w-3 h-3" /> Legenda Categorie:</span>
+                {CATEGORY_OPTIONS.map(cat => (
+                    <div key={cat} className={`text-[10px] font-bold px-2 py-1 rounded-md border ${CATEGORY_COLORS[cat].bg} ${CATEGORY_COLORS[cat].text} ${CATEGORY_COLORS[cat].border}`}>
+                        {cat}
+                    </div>
+                ))}
             </div>
 
             {/* LISTA VERTICALE CANTIERI */}
@@ -338,7 +383,9 @@ export const SiteManager: React.FC<Props> = ({ sites, setSites, employees, setEm
                             onDragEnd={handleDragEnd}
                             className={`
                         flex items-center gap-3 py-2 px-3 rounded-xl border transition-all select-none group
-                        ${isDragging ? 'bg-blue-50 border-[#004aad] opacity-50' : 'bg-white border-gray-200 hover:border-blue-300 hover:shadow-md'}
+                        ${isDragging ? 'opacity-50 border-dashed scale-[0.98]' : 'hover:shadow-md hover:border-blue-300'}
+                        ${site.category && !isDragging ? CATEGORY_COLORS[site.category].listBg : isDragging ? 'bg-blue-50 border-[#004aad]' : 'bg-white border-gray-200'}
+                        ${site.category && !isDragging ? CATEGORY_COLORS[site.category].listBorder : ''}
                     `}
                         >
                             {/* Drag Handle */}
@@ -356,7 +403,7 @@ export const SiteManager: React.FC<Props> = ({ sites, setSites, employees, setEm
                             {/* Content */}
                             <div className="flex-1 min-w-0">
                                 {isEditing ? (
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-[2fr_1.5fr_1fr_1fr] gap-3 animate-fade-in w-full">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[1.5fr_1.5fr_1fr_1fr_1fr] gap-3 animate-fade-in w-full">
                                         <input
                                             type="text"
                                             value={editName}
@@ -392,17 +439,27 @@ export const SiteManager: React.FC<Props> = ({ sites, setSites, employees, setEm
                                                 className="w-full pl-6 p-2 border border-gray-300 rounded-lg bg-white text-gray-900 outline-none text-sm focus:border-[#004aad] focus:ring-1 focus:ring-[#004aad]"
                                             />
                                         </div>
+                                        <select
+                                            value={editCategory}
+                                            onChange={(e) => setEditCategory(e.target.value as SiteCategory | '')}
+                                            className="w-full p-2 bg-white border border-gray-300 rounded-lg focus:border-[#004aad] focus:ring-1 focus:ring-[#004aad] outline-none text-sm transition-all font-medium text-gray-700"
+                                        >
+                                            <option value="">Categoria...</option>
+                                            {CATEGORY_OPTIONS.map(cat => (
+                                                <option key={cat} value={cat}>{cat}</option>
+                                            ))}
+                                        </select>
                                     </div>
                                 ) : (
-                                    <div className="grid grid-cols-[minmax(0,1fr)_auto] md:grid-cols-[1.5fr_1.5fr_1fr_1fr] lg:grid-cols-[2fr_2fr_1fr_1fr] gap-2 md:gap-3 items-center w-full">
-                                        <div className="font-bold text-gray-800 text-sm truncate flex items-center gap-2 order-1 md:order-1">
+                                    <div className="grid grid-cols-[minmax(0,1fr)_auto] md:grid-cols-[1.5fr_1.5fr_1fr_1fr] lg:grid-cols-[2fr_1.5fr_120px_1fr_1fr] gap-1 md:gap-3 items-center w-full">
+                                        <div className="font-bold text-gray-800 text-sm truncate flex items-center gap-2 order-1 md:order-1 lg:order-1">
                                             <span className="w-2 h-2 rounded-full bg-[#004aad] flex-shrink-0"></span>
                                             <span className="truncate">{site.name}</span>
                                         </div>
 
-                                        <div className="flex items-center min-w-0 order-3 md:order-2">
+                                        <div className="flex items-center min-w-0 order-3 md:order-2 lg:order-2">
                                             {(site.address || site.city) && (
-                                                <div className="flex items-center gap-1.5 text-xs font-medium text-gray-500 bg-gray-50 px-2 py-1 rounded-md border border-gray-100 max-w-full">
+                                                <div className="flex items-center gap-1.5 text-xs font-medium text-gray-500 bg-gray-50 px-2 py-0.5 md:py-1 rounded-md border border-gray-100 max-w-full">
                                                     <Map className="w-3 h-3 text-gray-400 flex-shrink-0" />
                                                     <span className="truncate">
                                                         {site.address}{site.address && site.city ? ', ' : ''}{site.city}
@@ -411,7 +468,15 @@ export const SiteManager: React.FC<Props> = ({ sites, setSites, employees, setEm
                                             )}
                                         </div>
 
-                                        <div className="flex items-center justify-end md:justify-center order-4 md:order-3">
+                                        <div className="hidden lg:flex items-center lg:order-3 justify-start">
+                                            {site.category && (
+                                                <span className={`inline-flex px-1.5 py-0.5 rounded text-[10px] uppercase tracking-wider font-extrabold border ${CATEGORY_COLORS[site.category].bg} ${CATEGORY_COLORS[site.category].text} ${CATEGORY_COLORS[site.category].border} shrink-0`}>
+                                                    {site.category}
+                                                </span>
+                                            )}
+                                        </div>
+
+                                        <div className="flex items-center justify-end md:justify-center order-4 md:order-3 lg:order-4">
                                             {site.netMonthlyRevenue !== undefined && (
                                                 <div className="flex items-center gap-1.5 text-xs font-bold text-[#004aad] bg-blue-50 px-2 py-1 rounded-md border border-blue-100 whitespace-nowrap">
                                                     <Euro className="w-3 h-3 flex-shrink-0" />
@@ -420,7 +485,7 @@ export const SiteManager: React.FC<Props> = ({ sites, setSites, employees, setEm
                                             )}
                                         </div>
 
-                                        <div className="flex items-center justify-end order-2 md:order-4">
+                                        <div className="flex items-center justify-end order-2 md:order-4 lg:order-5">
                                             {(() => {
                                                 const assignedEmployees = employees.filter(e => e.defaultAssignments.some(a => a.siteId === site.id));
                                                 if (assignedEmployees.length === 0) return <div className="w-1"></div>;
