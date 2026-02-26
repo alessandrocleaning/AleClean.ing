@@ -788,16 +788,23 @@ export const EmployeeManager: React.FC<Props> = ({ employees, sites, setEmployee
             </div>
 
             <div className="space-y-4">
-                {employees
-                    .filter(emp => {
-                        if (!employeeSearchTerm) return true;
-                        const fullName = `${emp.firstName} ${emp.lastName}`.toLowerCase();
-                        return fullName.includes(employeeSearchTerm.toLowerCase());
-                    })
-                    .map((emp, index) => {
+                {(() => {
+                    const filteredEmps = employees
+                        .map((emp, originalIndex) => ({ emp, originalIndex }))
+                        .filter(({ emp }) => {
+                            if (!employeeSearchTerm) return true;
+                            const fullName = `${emp.firstName} ${emp.lastName}`.toLowerCase();
+                            return fullName.includes(employeeSearchTerm.toLowerCase());
+                        });
+
+                    const activeEmps = filteredEmps.filter(({ emp }) => emp.showInAllowances !== false);
+                    const inactiveEmps = filteredEmps.filter(({ emp }) => emp.showInAllowances === false);
+
+                    const renderEmployeeCard = ({ emp, originalIndex }: { emp: Employee, originalIndex: number }) => {
+                        const index = originalIndex;
                         const isOpen = openEmpId === emp.id;
                         const isEditing = editingEmpId === emp.id;
-                        const isDraggable = !isOpen && !isEditing;
+                        const isDraggable = !isOpen && !isEditing && !employeeSearchTerm;
                         const assignments = emp.defaultAssignments || [];
 
                         const activeAssignments = assignments.filter(a => !a.archived);
@@ -1232,7 +1239,26 @@ export const EmployeeManager: React.FC<Props> = ({ employees, sites, setEmployee
                                 )}
                             </div>
                         );
-                    })}
+                    };
+
+                    return (
+                        <>
+                            {activeEmps.map(renderEmployeeCard)}
+
+                            {inactiveEmps.length > 0 && (
+                                <div className="py-6 flex items-center justify-center gap-4 px-4 opacity-60 mt-4 mb-2">
+                                    <div className="h-px bg-gray-300 flex-1"></div>
+                                    <span className="text-xs font-bold text-gray-500 uppercase tracking-widest flex items-center gap-2">
+                                        <EyeOff className="w-4 h-4 text-gray-400" /> Non visibili nei cedolini
+                                    </span>
+                                    <div className="h-px bg-gray-300 flex-1"></div>
+                                </div>
+                            )}
+
+                            {inactiveEmps.map(renderEmployeeCard)}
+                        </>
+                    );
+                })()}
                 {employees.length === 0 && (
                     <div className="text-center py-16 border-2 border-dashed border-gray-200 rounded-xl bg-gray-50/50">
                         <div className="bg-white p-4 rounded-full shadow-sm inline-block mb-4">
