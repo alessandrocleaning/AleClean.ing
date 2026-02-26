@@ -22,6 +22,59 @@ const DAYS: { key: DayKey; label: string }[] = [
 
 const NO_SPINNER_CLASS = "[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none";
 
+// --- SUB-COMPONENT: HOUR INPUT ---
+// Gestisce in modo fluido l'inserimento di orari decimali senza cancellare lo "0" iniziale
+const HourInput = ({
+    value,
+    onChange,
+    className
+}: {
+    value: number,
+    onChange: (val: string) => void,
+    className: string
+}) => {
+    // Mantieni lo stato locale testuale per permettere di digitare "0", "0.", "0,5" ecc.
+    const [localVal, setLocalVal] = useState(value === 0 ? '' : value.toString());
+
+    // Sincronizza quando prop cambia dall'esterno (es. caricamento dati o reset)
+    useEffect(() => {
+        setLocalVal(value === 0 ? '' : value.toString());
+    }, [value]);
+
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        let v = e.target.value;
+        // Permetti sia punto che virgola
+        v = v.replace(',', '.');
+        // Rimuovi caratteri non numerici tranne il punto
+        v = v.replace(/[^0-9.]/g, '');
+        // Impedisci più di un punto
+        const parts = v.split('.');
+        if (parts.length > 2) v = parts[0] + '.' + parts.slice(1).join('');
+
+        setLocalVal(v);
+        // Notifica subito il parent (utile per i totali in tempo reale)
+        onChange(v);
+    };
+
+    const handleBlur = () => {
+        // Alla perdita del focus, formatta "pulito" (es. "0." diventa "0" o "")
+        const num = parseFloat(localVal) || 0;
+        setLocalVal(num === 0 ? '' : num.toString());
+        onChange(num.toString());
+    };
+
+    return (
+        <input
+            type="text"
+            inputMode="decimal"
+            value={localVal}
+            onChange={handleChange}
+            onBlur={handleBlur}
+            className={className}
+        />
+    );
+};
+
 // --- SUB-COMPONENT: ADD EMPLOYEE MODAL ---
 const AddEmployeeModal = ({
     isOpen,
@@ -919,9 +972,9 @@ export const EmployeeManager: React.FC<Props> = ({ employees, sites, setEmployee
                                                                             const val = assign.schedule?.[day.key] || 0;
                                                                             return (
                                                                                 <div key={day.key} className="flex justify-center relative">
-                                                                                    <input
-                                                                                        type="number" min="0" step="0.5" value={val === 0 ? '' : val}
-                                                                                        onChange={(e) => updateHours(emp.id, index, day.key, e.target.value)}
+                                                                                    <HourInput
+                                                                                        value={val}
+                                                                                        onChange={(v) => updateHours(emp.id, index, day.key, v)}
                                                                                         className={`w-full h-9 text-center text-sm border-y border-r focus:border-[#004aad] focus:ring-1 focus:ring-[#004aad] outline-none transition-all ${NO_SPINNER_CLASS} 
                                                                 ${dIndex === 0 ? 'border-l rounded-l-md' : ''} ${dIndex === 6 ? 'rounded-r-md' : ''}
                                                                 ${val > 0 ? (isForfait ? 'bg-purple-50 text-purple-900 border-purple-200 font-bold' : 'bg-white font-bold text-gray-900 border-gray-300') : 'bg-gray-50 text-gray-400 border-gray-200 hover:bg-white'}
@@ -1030,7 +1083,7 @@ export const EmployeeManager: React.FC<Props> = ({ employees, sites, setEmployee
                                                             </div>
                                                             {DAYS.map(day => {
                                                                 const val = emp.contractHours?.[day.key] || 0;
-                                                                return <div key={day.key} className="flex justify-center"><input type="number" min="0" step="0.5" value={val === 0 ? '' : val} onChange={(e) => updateContractHours(emp.id, day.key, e.target.value)} className={`w-full h-8 text-center text-sm border rounded outline-none transition-all ${NO_SPINNER_CLASS} ${val > 0 ? 'bg-blue-50 border-blue-300 text-[#004aad] font-bold' : 'bg-gray-50/50 border-gray-200 text-gray-400 hover:bg-white'}`} /></div>
+                                                                return <div key={day.key} className="flex justify-center"><HourInput value={val} onChange={(v) => updateContractHours(emp.id, day.key, v)} className={`w-full h-8 text-center text-sm border rounded outline-none transition-all ${NO_SPINNER_CLASS} ${val > 0 ? 'bg-blue-50 border-blue-300 text-[#004aad] font-bold' : 'bg-gray-50/50 border-gray-200 text-gray-400 hover:bg-white'}`} /></div>
                                                             })}
                                                             <div className="col-span-4 text-center text-sm font-bold text-[#004aad] bg-blue-50 rounded-lg py-1 border border-blue-100">{totalContractHours} h</div>
                                                         </div>

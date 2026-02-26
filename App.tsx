@@ -12,6 +12,7 @@ import { subMonths, format } from 'date-fns';
 import { onAuthStateChanged, signOut, User } from 'firebase/auth';
 import { auth } from './lib/firebase';
 import { useFirestoreData } from './hooks/useFirestoreData';
+import { AgentDataInjector } from './components/AgentDataInjector';
 
 
 // ─── EMAIL UNICA AUTORIZZATA ───────────────────────────────────────────────
@@ -357,6 +358,8 @@ const App: React.FC<{ user: User; isAdmin: boolean }> = ({ user, isAdmin }) => {
           </div>
         )}
 
+        {/* AI Agent Data Injector */}
+        <AgentDataInjector employees={employees} setEmployees={setEmployees} sites={sites} setSites={setSites} />
 
         <div className="p-4 md:p-8 w-full min-h-full animate-fade-in-up">
 
