@@ -5,6 +5,7 @@ export interface Site {
   name: string;
   address?: string;
   city?: string;
+  netMonthlyRevenue?: number;
 }
 
 export type DayKey = 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun';
@@ -19,16 +20,16 @@ export interface Assignment {
   startDate: string;
   // ISO Date string (YYYY-MM-DD) indicating when this assignment ends (optional)
   endDate?: string;
-  schedule: Record<DayKey, number>; 
+  schedule: Record<DayKey, number>;
   type?: AssignmentType; // Defaults to HOURLY if undefined
   forfaitAmount?: number; // Only used if type is FORFAIT
   note?: string; // Appunti specifici per questo dipendente su questo cantiere
-  
+
   // Recurrence Logic
   recurrence?: RecurrenceType; // Default 'WEEKLY'
   interval?: number; // Default 1
   weekSelector?: string[]; // Array for multiple specific week selection (e.g. ['1', '3', 'LAST'])
-  
+
   // Archiving
   archived?: boolean; // If true, hides from main view but keeps data
 }
@@ -83,9 +84,9 @@ export interface ExtraJob {
   description: string;
   value: number; // Valore economico fisso per questo lavoro extra
   hours: Record<number, number>; // Mappa: giorno del mese (1-31) -> ore
-  
+
   // Locking logic for recurring extra jobs
-  isLocked?: boolean; 
+  isLocked?: boolean;
   startMonth?: string; // YYYY-MM when it was locked/started
 }
 

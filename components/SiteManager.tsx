@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Site, Employee } from '../types';
-import { MapPin, Plus, Trash2, GripVertical, Pencil, Check, X, Building2, Map, Search } from 'lucide-react';
+import { MapPin, Plus, Trash2, GripVertical, Pencil, Check, X, Building2, Map, Search, Users, Euro } from 'lucide-react';
 
 interface Props {
     sites: Site[];
@@ -17,21 +17,26 @@ const AddSiteModal = ({
 }: {
     isOpen: boolean;
     onClose: () => void;
-    onSave: (name: string, address: string, city: string) => void;
+    onSave: (name: string, address: string, city: string, netMonthlyRevenue?: number) => void;
 }) => {
     const [name, setName] = useState('');
     const [address, setAddress] = useState('');
     const [city, setCity] = useState('');
+    const [netMonthlyRevenue, setNetMonthlyRevenue] = useState('');
 
     if (!isOpen) return null;
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (!name.trim()) return;
-        onSave(name, address, city);
+
+        const parsedRevenue = netMonthlyRevenue ? parseFloat(netMonthlyRevenue.replace(',', '.')) : undefined;
+
+        onSave(name, address, city, !parsedRevenue || isNaN(parsedRevenue) ? undefined : parsedRevenue);
         setName('');
         setAddress('');
         setCity('');
+        setNetMonthlyRevenue('');
         onClose();
     };
 
@@ -86,6 +91,23 @@ const AddSiteModal = ({
                         </div>
                     </div>
 
+                    <div className="space-y-1">
+                        <label className="text-xs font-bold text-gray-500 uppercase">Fatturato Netto Mensile (€)</label>
+                        <div className="relative">
+                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <span className="text-gray-500 font-bold">€</span>
+                            </div>
+                            <input
+                                type="number"
+                                step="0.01"
+                                value={netMonthlyRevenue}
+                                onChange={(e) => setNetMonthlyRevenue(e.target.value)}
+                                placeholder="0.00"
+                                className="w-full pl-8 p-3 bg-gray-50 border border-gray-200 rounded-lg focus:border-[#004aad] focus:ring-1 focus:ring-[#004aad] outline-none transition-all font-medium"
+                            />
+                        </div>
+                    </div>
+
                     <div className="pt-4 flex gap-3">
                         <button type="button" onClick={onClose} className="flex-1 py-3 text-gray-500 font-bold hover:bg-gray-100 rounded-xl transition-colors">
                             Annulla
@@ -113,6 +135,7 @@ export const SiteManager: React.FC<Props> = ({ sites, setSites, employees, setEm
     const [editName, setEditName] = useState('');
     const [editAddress, setEditAddress] = useState('');
     const [editCity, setEditCity] = useState('');
+    const [editNetMonthlyRevenue, setEditNetMonthlyRevenue] = useState('');
 
     // Drag State
     const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
@@ -123,7 +146,7 @@ export const SiteManager: React.FC<Props> = ({ sites, setSites, employees, setEm
     // Delete Confirmation State
     const [deleteId, setDeleteId] = useState<string | null>(null);
 
-    const addSite = (name: string, address: string, city: string) => {
+    const addSite = (name: string, address: string, city: string, netMonthlyRevenue?: number) => {
         const trimmedName = name.trim();
         if (!trimmedName) return;
 
@@ -139,7 +162,8 @@ export const SiteManager: React.FC<Props> = ({ sites, setSites, employees, setEm
             id: crypto.randomUUID(),
             name: trimmedName,
             address: address.trim(),
-            city: city.trim()
+            city: city.trim(),
+            netMonthlyRevenue
         };
 
         setSites([...sites, newSite]);
@@ -163,6 +187,7 @@ export const SiteManager: React.FC<Props> = ({ sites, setSites, employees, setEm
         setEditName(site.name);
         setEditAddress(site.address || '');
         setEditCity(site.city || '');
+        setEditNetMonthlyRevenue(site.netMonthlyRevenue !== undefined ? site.netMonthlyRevenue.toString() : '');
     };
 
     const saveEdit = () => {
@@ -175,11 +200,14 @@ export const SiteManager: React.FC<Props> = ({ sites, setSites, employees, setEm
             return;
         }
 
+        const parsedRevenue = editNetMonthlyRevenue ? parseFloat(editNetMonthlyRevenue.replace(',', '.')) : undefined;
+
         const updatedSites = sites.map(s => s.id === editingId ? {
             ...s,
             name: editName.trim(),
             address: editAddress.trim(),
-            city: editCity.trim()
+            city: editCity.trim(),
+            netMonthlyRevenue: !parsedRevenue || isNaN(parsedRevenue) ? undefined : parsedRevenue
         } : s);
 
         setSites(updatedSites);
@@ -191,6 +219,7 @@ export const SiteManager: React.FC<Props> = ({ sites, setSites, employees, setEm
         setEditName('');
         setEditAddress('');
         setEditCity('');
+        setEditNetMonthlyRevenue('');
     };
 
     // --- DRAG LOGIC ---
@@ -216,7 +245,11 @@ export const SiteManager: React.FC<Props> = ({ sites, setSites, employees, setEm
         setDraggedIndex(null);
     };
 
-    const filteredSites = sites.filter(s => s.name.toLowerCase().includes(searchTerm.toLowerCase()));
+    const filteredSites = sites.filter(s =>
+        s.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (s.city && s.city.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (s.address && s.address.toLowerCase().includes(searchTerm.toLowerCase()))
+    );
 
     return (
         <div className="space-y-8 animate-fade-in pb-20 relative">
@@ -323,13 +356,13 @@ export const SiteManager: React.FC<Props> = ({ sites, setSites, employees, setEm
                             {/* Content */}
                             <div className="flex-1 min-w-0">
                                 {isEditing ? (
-                                    <div className="grid grid-cols-1 md:grid-cols-[2fr_2fr_1fr] gap-3 animate-fade-in">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-[2fr_1.5fr_1fr_1fr] gap-3 animate-fade-in w-full">
                                         <input
                                             type="text"
                                             value={editName}
                                             onChange={(e) => setEditName(e.target.value)}
                                             placeholder="Nome Cantiere"
-                                            className="p-2 border-2 border-[#004aad] rounded-lg bg-white text-gray-900 outline-none text-sm font-bold focus:shadow-md"
+                                            className="p-2 border-2 border-[#004aad] rounded-lg bg-white text-gray-900 outline-none text-sm font-bold focus:shadow-md w-full"
                                             autoFocus
                                         />
                                         <input
@@ -337,30 +370,78 @@ export const SiteManager: React.FC<Props> = ({ sites, setSites, employees, setEm
                                             value={editAddress}
                                             onChange={(e) => setEditAddress(e.target.value)}
                                             placeholder="Indirizzo"
-                                            className="p-2 border border-gray-300 rounded-lg bg-white text-gray-900 outline-none text-sm focus:border-[#004aad] focus:ring-1 focus:ring-[#004aad]"
+                                            className="p-2 border border-gray-300 rounded-lg bg-white text-gray-900 outline-none text-sm focus:border-[#004aad] focus:ring-1 focus:ring-[#004aad] w-full"
                                         />
                                         <input
                                             type="text"
                                             value={editCity}
                                             onChange={(e) => setEditCity(e.target.value)}
                                             placeholder="Città"
-                                            className="p-2 border border-gray-300 rounded-lg bg-white text-gray-900 outline-none text-sm focus:border-[#004aad] focus:ring-1 focus:ring-[#004aad]"
+                                            className="p-2 border border-gray-300 rounded-lg bg-white text-gray-900 outline-none text-sm focus:border-[#004aad] focus:ring-1 focus:ring-[#004aad] w-full"
                                         />
+                                        <div className="relative w-full">
+                                            <div className="absolute inset-y-0 left-0 pl-2 flex items-center pointer-events-none">
+                                                <span className="text-gray-500 font-bold text-sm">€</span>
+                                            </div>
+                                            <input
+                                                type="number"
+                                                step="0.01"
+                                                value={editNetMonthlyRevenue}
+                                                onChange={(e) => setEditNetMonthlyRevenue(e.target.value)}
+                                                placeholder="Fatturato"
+                                                className="w-full pl-6 p-2 border border-gray-300 rounded-lg bg-white text-gray-900 outline-none text-sm focus:border-[#004aad] focus:ring-1 focus:ring-[#004aad]"
+                                            />
+                                        </div>
                                     </div>
                                 ) : (
-                                    <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-6">
-                                        <div className="font-bold text-gray-800 text-sm truncate flex items-center gap-2">
+                                    <div className="grid grid-cols-[minmax(0,1fr)_auto] md:grid-cols-[1.5fr_1.5fr_1fr_1fr] lg:grid-cols-[2fr_2fr_1fr_1fr] gap-2 md:gap-3 items-center w-full">
+                                        <div className="font-bold text-gray-800 text-sm truncate flex items-center gap-2 order-1 md:order-1">
                                             <span className="w-2 h-2 rounded-full bg-[#004aad] flex-shrink-0"></span>
-                                            {site.name}
+                                            <span className="truncate">{site.name}</span>
                                         </div>
-                                        {(site.address || site.city) && (
-                                            <div className="flex items-center gap-1.5 text-xs font-medium text-gray-400 bg-gray-50 px-2 py-1 rounded-md border border-gray-100 self-start md:self-auto">
-                                                <Map className="w-3 h-3 text-gray-400" />
-                                                <span>
-                                                    {site.address}{site.address && site.city ? ', ' : ''}{site.city}
-                                                </span>
-                                            </div>
-                                        )}
+
+                                        <div className="flex items-center min-w-0 order-3 md:order-2">
+                                            {(site.address || site.city) && (
+                                                <div className="flex items-center gap-1.5 text-xs font-medium text-gray-500 bg-gray-50 px-2 py-1 rounded-md border border-gray-100 max-w-full">
+                                                    <Map className="w-3 h-3 text-gray-400 flex-shrink-0" />
+                                                    <span className="truncate">
+                                                        {site.address}{site.address && site.city ? ', ' : ''}{site.city}
+                                                    </span>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        <div className="flex items-center justify-end md:justify-center order-4 md:order-3">
+                                            {site.netMonthlyRevenue !== undefined && (
+                                                <div className="flex items-center gap-1.5 text-xs font-bold text-[#004aad] bg-blue-50 px-2 py-1 rounded-md border border-blue-100 whitespace-nowrap">
+                                                    <Euro className="w-3 h-3 flex-shrink-0" />
+                                                    <span>{site.netMonthlyRevenue.toLocaleString('it-IT', { style: 'currency', currency: 'EUR' })}</span>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        <div className="flex items-center justify-end order-2 md:order-4">
+                                            {(() => {
+                                                const assignedEmployees = employees.filter(e => e.defaultAssignments.some(a => a.siteId === site.id));
+                                                if (assignedEmployees.length === 0) return <div className="w-1"></div>;
+                                                return (
+                                                    <div className="flex items-center gap-1">
+                                                        <Users className="w-3 h-3 text-gray-400 mr-1 hidden lg:block" />
+                                                        <div className="flex -space-x-1">
+                                                            {assignedEmployees.map((emp) => (
+                                                                <div
+                                                                    key={emp.id}
+                                                                    className="w-6 h-6 rounded-full bg-indigo-100 text-[#004aad] font-bold text-[9px] flex items-center justify-center border border-white shadow-sm ring-1 ring-[#004aad]/20"
+                                                                    title={`${emp.firstName} ${emp.lastName}`}
+                                                                >
+                                                                    {emp.firstName.charAt(0)}{emp.lastName.charAt(0)}
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })()}
+                                        </div>
                                     </div>
                                 )}
                             </div>
@@ -421,6 +502,6 @@ export const SiteManager: React.FC<Props> = ({ sites, setSites, employees, setEm
                     </div>
                 )}
             </div>
-        </div>
+        </div >
     );
 };
