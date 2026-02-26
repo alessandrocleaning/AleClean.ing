@@ -127,7 +127,10 @@ const AddSiteModal = ({
                             <select
                                 value={category}
                                 onChange={(e) => setCategory(e.target.value as SiteCategory | '')}
-                                className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg focus:border-[#004aad] focus:ring-1 focus:ring-[#004aad] outline-none transition-all font-medium text-gray-700"
+                                className={`w-full p-3 rounded-lg focus:border-[#004aad] focus:ring-1 focus:ring-[#004aad] outline-none transition-all font-bold ${category
+                                    ? `border ${CATEGORY_COLORS[category as SiteCategory].bg} ${CATEGORY_COLORS[category as SiteCategory].text} ${CATEGORY_COLORS[category as SiteCategory].border}`
+                                    : 'bg-gray-50 border border-gray-200 text-gray-700'
+                                    }`}
                             >
                                 <option value="">Nessuna Categoria</option>
                                 {CATEGORY_OPTIONS.map(cat => (
@@ -359,13 +362,15 @@ export const SiteManager: React.FC<Props> = ({ sites, setSites, employees, setEm
             </div>
 
             {/* CATEGORY LEGEND */}
-            <div className="flex flex-wrap items-center gap-2">
-                <span className="text-xs font-bold text-gray-400 uppercase mr-2 flex items-center gap-1"><Tag className="w-3 h-3" /> Legenda Categorie:</span>
-                {CATEGORY_OPTIONS.map(cat => (
-                    <div key={cat} className={`text-[10px] font-bold px-2 py-1 rounded-md border ${CATEGORY_COLORS[cat].bg} ${CATEGORY_COLORS[cat].text} ${CATEGORY_COLORS[cat].border}`}>
-                        {cat}
-                    </div>
-                ))}
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                <span className="text-xs font-bold text-gray-400 uppercase flex items-center gap-1"><Tag className="w-3 h-3" /> Legenda Categorie:</span>
+                <div className="flex flex-wrap items-center gap-2">
+                    {CATEGORY_OPTIONS.map(cat => (
+                        <div key={cat} className={`text-[10px] font-bold px-2 py-1 rounded-md border ${CATEGORY_COLORS[cat].bg} ${CATEGORY_COLORS[cat].text} ${CATEGORY_COLORS[cat].border}`}>
+                            {cat}
+                        </div>
+                    ))}
+                </div>
             </div>
 
             {/* LISTA VERTICALE CANTIERI */}
@@ -442,7 +447,10 @@ export const SiteManager: React.FC<Props> = ({ sites, setSites, employees, setEm
                                         <select
                                             value={editCategory}
                                             onChange={(e) => setEditCategory(e.target.value as SiteCategory | '')}
-                                            className="w-full p-2 bg-white border border-gray-300 rounded-lg focus:border-[#004aad] focus:ring-1 focus:ring-[#004aad] outline-none text-sm transition-all font-medium text-gray-700"
+                                            className={`w-full p-2 rounded-lg focus:border-[#004aad] focus:ring-1 focus:ring-[#004aad] outline-none text-sm transition-all font-bold ${editCategory
+                                                ? `border ${CATEGORY_COLORS[editCategory as SiteCategory].bg} ${CATEGORY_COLORS[editCategory as SiteCategory].text} ${CATEGORY_COLORS[editCategory as SiteCategory].border}`
+                                                : 'bg-white border border-gray-300 text-gray-700'
+                                                }`}
                                         >
                                             <option value="">Categoria...</option>
                                             {CATEGORY_OPTIONS.map(cat => (
