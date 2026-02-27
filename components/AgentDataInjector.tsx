@@ -10,114 +10,199 @@ export const AgentDataInjector: React.FC<{
     const [done, setDone] = useState(false);
 
     useEffect(() => {
-        if (done || employees.length === 0 || sites.length === 0) return;
+        if (done || sites.length === 0) return;
 
         const t = setTimeout(() => {
             let updatedSites = [...sites];
-            let updatedEmployees = [...employees];
-            let hasGlobalChanges = false;
-            let hasSiteChanges = false;
+            let matchedCount = 0;
 
-            // Trova TUTTI i cantieri che si chiamano "via cadorna 10" o simili
-            const targetName = 'cadorna 10';
-            const matchingSites = updatedSites.filter(s => s.name.toLowerCase().includes(targetName));
+            const extractedData = [
+                { "via": "Via Fatebenefratelli 21", "imponibile": 356.27 },
+                { "via": "Via Colombo 1", "imponibile": 701.99 },
+                { "via": "Via Don Milani 2/4", "imponibile": 730 },
+                { "via": "Via Penati 8", "imponibile": 300 },
+                { "via": "Via Don Sturzo 10", "imponibile": 1232.97 },
+                { "via": "Via Balconi 31/37/43", "imponibile": 330 },
+                { "via": "Via Vespucci 17/21", "imponibile": 1000 },
+                { "via": "Via Don Sturzo 2/6/10", "imponibile": 0 },
+                { "via": "Via Nilde Iotti 16", "imponibile": 800 },
+                { "via": "Via Don Sturzo 6 G/H", "imponibile": 600 },
+                { "via": "Via Torrente Molgora 1", "imponibile": 500 },
+                { "via": "Via Giusti 28", "imponibile": 1500 },
+                { "via": "Via Wagner 4/A", "imponibile": 370 },
+                { "via": "Via XXV Aprile 27A", "imponibile": 280 },
+                { "via": "Via Pier Della Francesca 4", "imponibile": 645.05 },
+                { "via": "Via Milano 39", "imponibile": 108 },
+                { "via": "Via Largo Riboldi 4", "imponibile": 218 },
+                { "via": "Via De Gasperi 10 - Turati 1", "imponibile": 1550 },
+                { "via": "Via Tiepolo 4", "imponibile": 655 },
+                { "via": "Via Roma 13/15", "imponibile": 312 },
+                { "via": "Via Milano 2A", "imponibile": 900 },
+                { "via": "via Firenze 16", "imponibile": 200 },
+                { "via": "Via Mantegna 82A", "imponibile": 500 },
+                { "via": "Via De Gasperi 5", "imponibile": 121 },
+                { "via": "Via Roma 113", "imponibile": 140 },
+                { "via": "Via Roma 113 Palassin", "imponibile": 94 },
+                { "via": "Via Cadore 46", "imponibile": 360 },
+                { "via": "Via Cimabue 13", "imponibile": 980 },
+                { "via": "Via Milano 36", "imponibile": 246.8 },
+                { "via": "P.zza Vecchia Filanda 1", "imponibile": 300 },
+                { "via": "Via Buonarroti 16", "imponibile": 125 },
+                { "via": "Via Masaccio 5", "imponibile": 284.5 },
+                { "via": "Via Corridoni 18", "imponibile": 240 },
+                { "via": "Via San Francesco 8", "imponibile": 413.8 },
+                { "via": "Via Mantegna 46", "imponibile": 520 },
+                { "via": "Via Leonardo da Vinci 39", "imponibile": 260 },
+                { "via": "Viale Assunta 13", "imponibile": 700 },
+                { "via": "Via Giorgione 6", "imponibile": 511.5 },
+                { "via": "Via Panama 14", "imponibile": 195 },
+                { "via": "Via Delle Ande 3", "imponibile": 237.5 },
+                { "via": "Via T. Grossi 11", "imponibile": 370 },
+                { "via": "via Bergamo 6", "imponibile": 400 },
+                { "via": "Via Montegrappa 10", "imponibile": 343.3 },
+                { "via": "Via Cadorna 10", "imponibile": 177 },
+                { "via": "Via Visconti 20", "imponibile": 366.66 },
+                { "via": "Via Cimabue 2", "imponibile": 370 },
+                { "via": "Via Mazzini 2", "imponibile": 720 },
+                { "via": "Via Matteotti 1/3", "imponibile": 250 },
+                { "via": "Strada Vicinale Cascina Torriana, snc", "imponibile": 950 },
+                { "via": "via Fatebenefratelli 17", "imponibile": 300 },
+                { "via": "Via Briantea 74", "imponibile": 280 },
+                { "via": "Via Carducci 69", "imponibile": 180 },
+                { "via": "Via Villoresi 12/14", "imponibile": 450 },
+                { "via": "Via Pascoli 1-13", "imponibile": 2395 },
+                { "via": "Via Milano 119", "imponibile": 185 },
+                { "via": "Via Mincio 1G", "imponibile": 1960 },
+                { "via": "Via Deledda 19 e Piazza Pasolini", "imponibile": 3200 },
+                { "via": "Viale Assunta 112", "imponibile": 80 },
+                { "via": "Via Oberdan 6/8", "imponibile": 700 },
+                { "via": "Via Buonarroti 28", "imponibile": 230 },
+                { "via": "Via Vespucci 38", "imponibile": 280 },
+                { "via": "Via Pasubio 16", "imponibile": 930 },
+                { "via": "Via Como 11", "imponibile": 590 },
+                { "via": "Via Roma 126", "imponibile": 340 },
+                { "via": "Via S. Pertini, 2/6", "imponibile": 460 },
+                { "via": "Via San Francesco, 26F", "imponibile": 95 },
+                { "via": "Via Mazzini, 5", "imponibile": 280 },
+                { "via": "Via Conte Suardi, 68", "imponibile": 220 },
+                { "via": "Via Torino Cernusco", "imponibile": 300 },
+                { "via": "Via Monza, 79", "imponibile": 320 },
+                { "via": "Via Pietro Nenni, 5", "imponibile": 480 },
+                { "via": "Viale Assunta, 140", "imponibile": 160 },
+                { "via": "Via Morelli, 1", "imponibile": 1500 },
+                { "via": "Via Magistretti, 10", "imponibile": 1500 },
+                { "via": "Via Fratelli di Dio, 2/A", "imponibile": 680 },
+                { "via": "Viale Assunta, 73 e Via Diaz, 46", "imponibile": 600 },
+                { "via": "Via Cimabue, 15", "imponibile": 860 },
+                { "via": "Via Raffaello, 13", "imponibile": 230 },
+                { "via": "Via Videmari, 3", "imponibile": 110 },
+                { "via": "Via Mestre, 9 – 11", "imponibile": 4900 },
+                { "via": "Via Pietro da Cernusco, 2", "imponibile": 400 },
+                { "via": "Via Pietro da Cernusco, 2", "imponibile": 420 },
+                { "via": "Via Lavalliere, 39", "imponibile": 370 },
+                { "via": "Via Roggia Renatella, 1", "imponibile": 500 },
+                { "via": "Via Carlo Mariani, 2", "imponibile": 680 },
+                { "via": "Via Amendola, 7", "imponibile": 1500 },
+                { "via": "Via Colombo, 19", "imponibile": 250 },
+                { "via": "Via Marconi, 15", "imponibile": 330 },
+                { "via": "Via Philips, 12", "imponibile": 3150 },
+                { "via": "Via Buonarroti, 33, 35, 37", "imponibile": 200 },
+                { "via": "Via Monza, 140D", "imponibile": 530 },
+                { "via": "Via Adua, 26", "imponibile": 250 },
+                { "via": "Via Tolmezzo, 10", "imponibile": 230 },
+                { "via": "Via Rivoltana, 53", "imponibile": 125 },
+                { "via": "Via D'Annunzio, 3", "imponibile": 190 },
+                { "via": "Via Giuseppe di Vittorio, 347", "imponibile": 800 },
+                { "via": "Via XXV Aprile, 23", "imponibile": 1580 },
+                { "via": "Via Giancarlo Puecher, 1", "imponibile": 960 },
+                { "via": "Via Ugo la Malfa, 1", "imponibile": 290 },
+                { "via": "Via Adua, 30/32", "imponibile": 230 },
+                { "via": "Via Martiri delle Foibe 2/4", "imponibile": 760 },
+                { "via": "Via Arturo Toscanini, 16", "imponibile": 550 },
+                { "via": "Vua Increa, 19", "imponibile": 380 },
+                { "via": "via Cristei, 2", "imponibile": 90 },
+                { "via": "Piazza Conciliazione, 2", "imponibile": 100 },
+                { "via": "Via Dante, 30", "imponibile": 230 },
+                { "via": "Via Piero Gobetti, 2/A", "imponibile": 1150 },
+                { "via": "Via Sandro Pertini, 47", "imponibile": 380 },
+                { "via": "Via Terra, 36", "imponibile": 480 },
+                { "via": "Via Naviglio, 4", "imponibile": 240 },
+                { "via": "Via Trieste, 27", "imponibile": 270 },
+                { "via": "Via Filzi, 4", "imponibile": 230 },
+                { "via": "Via De Amicis, 12A", "imponibile": 255 },
+                { "via": "Via Enrico Mattei, Snc", "imponibile": 150 },
+                { "via": "via De Gasperi 2", "imponibile": 1230 },
+                { "via": "Via San Giovanni Bosco, 5", "imponibile": 390 },
+                { "via": "Via Como, 3", "imponibile": 390 }
+            ];
 
-            if (matchingSites.length > 0) {
-                console.log("Agent: Trovati", matchingSites.length, "cantieri 'cadorna 10':", matchingSites);
+            const notFoundExtractedData: any[] = [];
+            const matchedSiteIds = new Set<string>();
 
-                // Teniamo il primo come "BUONO" (master)
-                const masterSite = matchingSites[0];
-                const masterId = masterSite.id;
+            // Cycle through extracted data
+            extractedData.forEach(data => {
+                const targetName = data.via.toLowerCase().trim();
+                let bestMatch = null;
 
-                // Se ci sono duplicati, prepariamo la rimozione e l'aggiornamento degli ID
-                const duplicateIds = matchingSites.slice(1).map(s => s.id);
-
-                if (duplicateIds.length > 0) {
-                    console.log("Agent: Rimozione duplicati IDs:", duplicateIds);
-                    // Togliamo i duplicati dai cantieri
-                    updatedSites = updatedSites.filter(s => !duplicateIds.includes(s.id));
-                    hasSiteChanges = true;
+                // Try to find the site that includes this string or is included by it
+                for (let i = 0; i < updatedSites.length; i++) {
+                    const siteName = updatedSites[i].name.toLowerCase().trim();
+                    if (siteName.includes(targetName) || targetName.includes(siteName)) {
+                        bestMatch = i;
+                        break;
+                    }
                 }
 
-                // Adesso passiamo tutti i dipendenti.
-                // Qualsiasi assegnazione che punti a un duplicateId, oppure "Sconosciuto" (mancante) per via Cadorna,
-                // o che genericamente debba essere unificata, la facciamo puntare al masterId.
-                updatedEmployees.forEach((emp, empIdx) => {
-                    let empChanged = false;
-                    const newAssignments = (emp.defaultAssignments || []).map(assign => {
-                        // Se l'assegnazione punta a un ID duplicato che abbiamo rimosso
-                        if (duplicateIds.includes(assign.siteId)) {
-                            empChanged = true;
-                            return { ...assign, siteId: masterId };
-                        }
+                if (bestMatch !== null && data.imponibile > 0) {
+                    matchedCount++;
+                    matchedSiteIds.add(updatedSites[bestMatch].id);
+                    updatedSites[bestMatch] = {
+                        ...updatedSites[bestMatch],
+                        netMonthlyRevenue: data.imponibile
+                    };
+                } else {
+                    notFoundExtractedData.push(data);
+                }
+            });
 
-                        // Se l'assegnazione punta al masterId, va bene così
-                        if (assign.siteId === masterId) {
-                            return assign;
-                        }
+            // Find sites in App that didn't receive an update
+            const sitesNoRevenue = updatedSites.filter(s => !matchedSiteIds.has(s.id));
 
-                        // Potrebbe esserci un'assegnazione che punta a un ID cancellato in passato
-                        // Ma noi qui sistemiamo solo i duplicati attuali. Per coprire il fatto che 
-                        // la UI di EmployeeManager mostra "Sconosciuto", significa che l'ID salvato 
-                        // nell'assegnazione NON esiste in `sites`. 
-                        const siteExistsInList = updatedSites.some(s => s.id === assign.siteId);
-                        if (!siteExistsInList) {
-                            // È uno "sconosciuto". Dobbiamo capire se era Cadorna 10? Non possiamo saperlo dall'ID se non c'è più.
-                            // Però il problema dell'utente è che quando seleziona dal menu "via cadorna", succede un bug.
-                        }
+            if (matchedCount > 0) {
+                setSites(updatedSites);
 
-                        return assign;
+                // Alert first
+                setTimeout(() => {
+                    alert(`🤖 Agente AI: Fatturati completati!\n✅ Cantieri aggiornati: ${matchedCount}\n❌ Voci foto NON trovate: ${notFoundExtractedData.length}\n📄 Cantieri App NON aggiornati: ${sitesNoRevenue.length}`);
+
+                    // Trigger download of reports
+                    let reportText = "=== VOCI DALLE FOTO NON TROVATE NELL'APP ===\n";
+                    notFoundExtractedData.forEach(e => {
+                        reportText += `- ${e.via} (Imponibile: ${e.imponibile}€)\n`;
                     });
 
-                    if (empChanged) {
-                        updatedEmployees[empIdx] = { ...emp, defaultAssignments: newAssignments };
-                        hasGlobalChanges = true;
-                    }
-                });
+                    reportText += "\n\n=== CANTIERI DELL'APP SENZA FATTURATO (o non trovati nelle foto) ===\n";
+                    sitesNoRevenue.forEach(s => {
+                        reportText += `- ${s.name} (Cat: ${s.category || 'N/A'})\n`;
+                    });
 
-                // Un'altra possibile causa: l'utente cerca di aggiungere Cadorna, ma c'è un bug nel salvataggio.
-                // Assicuriamo che Cadorna sia ben pulito.
-                masterSite.name = "via Cadorna 10"; // normalizziamo il nome
-                masterSite.city = "Cernusco";
-                hasSiteChanges = true; // Forza salvataggio pulito
+                    const blob = new Blob([reportText], { type: 'text/plain' });
+                    const url = URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = `Report_Fatturati_Cantieri.txt`;
+                    link.click();
+                    URL.revokeObjectURL(url);
+
+                }, 800);
             } else {
-                // Se NON esiste, lo creiamo (ma l'utente dice che c'è!)
-                const masterId = 'site-forced-' + Math.random().toString(36).substr(2, 9);
-                updatedSites.push({
-                    id: masterId,
-                    name: 'via Cadorna 10',
-                    address: 'via Cadorna 10',
-                    city: 'Cernusco'
-                });
-                hasSiteChanges = true;
-            }
-
-            // Ora ispezioniamo Isa e Reynaldo specificamente, forzando Cadorna a essere sano se ce l'hanno.
-            // Se ce l'hanno "sconosciuto", cerchiamo e togliamo l'assegnazione sconosciuta e rimettiamo Cadorna pulita?
-            // Ma l'utente ha detto: "ogni volta che lo inserisco ed elimino il vecchio mi rimette sconosciuto".
-            // Questo vuol dire che il componente UI seleziona male Cadorna o l'ID è buggato.
-            // Vediamo se ci sono siti Cadorna *vuoti*
-
-            if (hasSiteChanges) {
-                setSites(updatedSites);
-            }
-            if (hasGlobalChanges) {
-                // Aspettiamo un attimo per dare il tempo a firebase
-                setTimeout(() => {
-                    setEmployees(updatedEmployees);
-                    alert(`🤖 Agente AI: Ho pulito l'anagrafica di 'via Cadorna 10' dai possibili duplicati/corruzioni! Riprova ora ad assegnarlo.`);
-                }, 1000);
-            } else if (hasSiteChanges) {
-                alert(`🤖 Agente AI: Ho pulito l'anagrafica di 'via Cadorna 10'. Riprova ora ad aggiungerlo.`);
-            } else {
-                alert(`🤖 Agente AI: via Cadorna 10 sembrava già a posto. Probabilmente il problema è legato al salvataggio Firestore.`);
+                alert('🤖 Agente AI: Nessun cantiere è stato trovato con quei nomi.');
             }
 
             setDone(true);
         }, 2000);
 
         return () => clearTimeout(t);
-
     }, [employees, sites, setEmployees, setSites, done]);
 
     return null;

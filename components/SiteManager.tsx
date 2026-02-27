@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Site, Employee, SiteCategory } from '../types';
-import { MapPin, Plus, Trash2, GripVertical, Pencil, Check, X, Building2, Map, Search, Users, Euro, Tag } from 'lucide-react';
+import { MapPin, Plus, Trash2, GripVertical, Pencil, Check, X, Building2, Map, Search, Users, Euro, Tag, Filter, ArrowUpDown } from 'lucide-react';
 
 interface Props {
     sites: Site[];
@@ -176,6 +176,18 @@ export const SiteManager: React.FC<Props> = ({ sites, setSites, employees, setEm
     // Search State
     const [searchTerm, setSearchTerm] = useState('');
 
+    // Filter State
+    const [filterCategory, setFilterCategory] = useState<SiteCategory | ''>('');
+    const [filterCity, setFilterCity] = useState('');
+    const [filterAssigned, setFilterAssigned] = useState<'all' | 'assigned' | 'unassigned'>('all');
+    const [sortPrice, setSortPrice] = useState<'none' | 'asc' | 'desc'>('none');
+
+    // Derived: unique cities for dropdown
+    const uniqueCities = useMemo(() => {
+        const cities = sites.map(s => s.city).filter(Boolean) as string[];
+        return Array.from(new Set(cities)).sort();
+    }, [sites]);
+
     // Delete Confirmation State
     const [deleteId, setDeleteId] = useState<string | null>(null);
 
@@ -282,12 +294,42 @@ export const SiteManager: React.FC<Props> = ({ sites, setSites, employees, setEm
         setDraggedIndex(null);
     };
 
-    const filteredSites = sites.filter(s =>
-        s.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (s.city && s.city.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (s.address && s.address.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (s.category && s.category.toLowerCase().includes(searchTerm.toLowerCase()))
-    );
+    const filteredSites = useMemo(() => {
+        let result = sites.filter(s =>
+            s.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (s.city && s.city.toLowerCase().includes(searchTerm.toLowerCase())) ||
+            (s.address && s.address.toLowerCase().includes(searchTerm.toLowerCase())) ||
+            (s.category && s.category.toLowerCase().includes(searchTerm.toLowerCase()))
+        );
+
+        if (filterCategory) {
+            result = result.filter(s => s.category === filterCategory);
+        }
+        if (filterCity) {
+            result = result.filter(s => s.city?.toLowerCase() === filterCity.toLowerCase());
+        }
+        if (filterAssigned === 'assigned') {
+            result = result.filter(s => employees.some(e => e.defaultAssignments.some(a => a.siteId === s.id)));
+        } else if (filterAssigned === 'unassigned') {
+            result = result.filter(s => !employees.some(e => e.defaultAssignments.some(a => a.siteId === s.id)));
+        }
+        if (sortPrice === 'asc') {
+            result = [...result].sort((a, b) => (a.netMonthlyRevenue ?? 0) - (b.netMonthlyRevenue ?? 0));
+        } else if (sortPrice === 'desc') {
+            result = [...result].sort((a, b) => (b.netMonthlyRevenue ?? 0) - (a.netMonthlyRevenue ?? 0));
+        }
+        return result;
+    }, [sites, employees, searchTerm, filterCategory, filterCity, filterAssigned, sortPrice]);
+
+    const hasActiveFilters = !!(filterCategory || filterCity || filterAssigned !== 'all' || sortPrice !== 'none');
+
+    const resetAllFilters = () => {
+        setSearchTerm('');
+        setFilterCategory('');
+        setFilterCity('');
+        setFilterAssigned('all');
+        setSortPrice('none');
+    };
 
     return (
         <div className="space-y-8 animate-fade-in pb-20 relative">
@@ -361,16 +403,93 @@ export const SiteManager: React.FC<Props> = ({ sites, setSites, employees, setEm
                 </div>
             </div>
 
-            {/* CATEGORY LEGEND */}
-            <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-                <span className="text-xs font-bold text-gray-400 uppercase flex items-center gap-1"><Tag className="w-3 h-3" /> Legenda Categorie:</span>
-                <div className="flex flex-wrap items-center gap-2">
-                    {CATEGORY_OPTIONS.map(cat => (
-                        <div key={cat} className={`text-[10px] font-bold px-2 py-1 rounded-md border ${CATEGORY_COLORS[cat].bg} ${CATEGORY_COLORS[cat].text} ${CATEGORY_COLORS[cat].border}`}>
-                            {cat}
-                        </div>
-                    ))}
+            {/* CATEGORY LEGEND + FILTERS */}
+            <div className="flex flex-col gap-3">
+                {/* Row 1: Legenda Categorie */}
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                    <span className="text-xs font-bold text-gray-400 uppercase flex items-center gap-1"><Tag className="w-3 h-3" /> Legenda Categorie:</span>
+                    <div className="flex flex-wrap items-center gap-2">
+                        {CATEGORY_OPTIONS.map(cat => (
+                            <div key={cat} className={`text-[10px] font-bold px-2 py-1 rounded-md border ${CATEGORY_COLORS[cat].bg} ${CATEGORY_COLORS[cat].text} ${CATEGORY_COLORS[cat].border}`}>
+                                {cat}
+                            </div>
+                        ))}
+                    </div>
                 </div>
+
+                {/* Row 2: Filtri Avanzati */}
+                <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-xs font-bold text-gray-400 uppercase flex items-center gap-1 mr-1">
+                        <Filter className="w-3 h-3" /> Filtri:
+                    </span>
+
+                    {/* Categoria */}
+                    <select
+                        value={filterCategory}
+                        onChange={e => setFilterCategory(e.target.value as SiteCategory | '')}
+                        className={`text-xs font-bold px-2 py-1 rounded-lg border outline-none transition-colors cursor-pointer ${filterCategory
+                                ? `${CATEGORY_COLORS[filterCategory as SiteCategory].bg} ${CATEGORY_COLORS[filterCategory as SiteCategory].text} ${CATEGORY_COLORS[filterCategory as SiteCategory].border}`
+                                : 'bg-white text-gray-500 border-gray-200 hover:border-[#004aad]'
+                            }`}
+                    >
+                        <option value="">Tutte le categorie</option>
+                        {CATEGORY_OPTIONS.map(cat => (
+                            <option key={cat} value={cat}>{cat}</option>
+                        ))}
+                    </select>
+
+                    {/* Città */}
+                    <select
+                        value={filterCity}
+                        onChange={e => setFilterCity(e.target.value)}
+                        className={`text-xs font-bold px-2 py-1 rounded-lg border outline-none transition-colors cursor-pointer ${filterCity ? 'bg-indigo-50 text-indigo-700 border-indigo-200' : 'bg-white text-gray-500 border-gray-200 hover:border-[#004aad]'
+                            }`}
+                    >
+                        <option value="">Tutte le città</option>
+                        {uniqueCities.map(city => (
+                            <option key={city} value={city}>{city}</option>
+                        ))}
+                    </select>
+
+                    {/* Assegnati */}
+                    <select
+                        value={filterAssigned}
+                        onChange={e => setFilterAssigned(e.target.value as 'all' | 'assigned' | 'unassigned')}
+                        className={`text-xs font-bold px-2 py-1 rounded-lg border outline-none transition-colors cursor-pointer ${filterAssigned !== 'all' ? 'bg-green-50 text-green-700 border-green-200' : 'bg-white text-gray-500 border-gray-200 hover:border-[#004aad]'
+                            }`}
+                    >
+                        <option value="all">Tutti</option>
+                        <option value="assigned">✅ Assegnati</option>
+                        <option value="unassigned">⬜ Non assegnati</option>
+                    </select>
+
+                    {/* Prezzo */}
+                    <button
+                        onClick={() => setSortPrice(p => p === 'none' ? 'asc' : p === 'asc' ? 'desc' : 'none')}
+                        className={`text-xs font-bold px-2 py-1 rounded-lg border flex items-center gap-1 transition-colors cursor-pointer ${sortPrice !== 'none' ? 'bg-blue-50 text-[#004aad] border-blue-200' : 'bg-white text-gray-500 border-gray-200 hover:border-[#004aad]'
+                            }`}
+                    >
+                        <ArrowUpDown className="w-3 h-3" />
+                        Prezzo {sortPrice === 'asc' ? '↑' : sortPrice === 'desc' ? '↓' : ''}
+                    </button>
+
+                    {/* Reset */}
+                    {hasActiveFilters && (
+                        <button
+                            onClick={resetAllFilters}
+                            className="text-xs font-bold px-2 py-1 rounded-lg border bg-red-50 text-red-600 border-red-200 hover:bg-red-100 transition-colors"
+                        >
+                            ✕ Reset
+                        </button>
+                    )}
+                </div>
+
+                {/* Counter risultati se filtri attivi */}
+                {hasActiveFilters && (
+                    <p className="text-xs text-gray-400 font-medium">
+                        Visualizzando <strong className="text-gray-700">{filteredSites.length}</strong> su {sites.length} cantieri
+                    </p>
+                )}
             </div>
 
             {/* LISTA VERTICALE CANTIERI */}
@@ -567,8 +686,8 @@ export const SiteManager: React.FC<Props> = ({ sites, setSites, employees, setEm
                             <MapPin className="w-10 h-10 text-gray-300" />
                         </div>
                         <p className="text-gray-500 font-medium">Nessun cantiere trovato.</p>
-                        {searchTerm ? (
-                            <button onClick={() => setSearchTerm('')} className="text-[#004aad] text-sm font-bold mt-2 hover:underline">Resetta ricerca</button>
+                        {(searchTerm || hasActiveFilters) ? (
+                            <button onClick={resetAllFilters} className="text-[#004aad] text-sm font-bold mt-2 hover:underline">Resetta tutti i filtri</button>
                         ) : (
                             <button onClick={() => setIsAddModalOpen(true)} className="text-[#004aad] text-sm font-bold mt-2 hover:underline">Aggiungine uno ora</button>
                         )}
