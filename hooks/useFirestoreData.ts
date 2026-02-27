@@ -125,7 +125,8 @@ export const useFirestoreData = (user: User, isAdmin: boolean): UseFirestoreData
                     saveEmployeesTimerRef.current = setTimeout(async () => {
                         try {
                             lastSavedEmployeesRef.current = nextString;
-                            await saveEmployees(user.uid, next);
+                            // Firebase rejects 'undefined' properties. JSON.parse(nextString) safely strips them.
+                            await saveEmployees(user.uid, JSON.parse(nextString));
                             setSyncStatus('synced');
                         } catch (e) {
                             console.error('Errore salvataggio dipendenti:', e);
@@ -150,7 +151,8 @@ export const useFirestoreData = (user: User, isAdmin: boolean): UseFirestoreData
                     saveSitesTimerRef.current = setTimeout(async () => {
                         try {
                             lastSavedSitesRef.current = nextString;
-                            await saveSites(user.uid, next);
+                            // Firebase rejects 'undefined' properties. JSON.parse(nextString) safely strips them.
+                            await saveSites(user.uid, JSON.parse(nextString));
                             setSyncStatus('synced');
                         } catch (e) {
                             console.error('Errore salvataggio cantieri:', e);
