@@ -66,6 +66,10 @@ export const useFirestoreData = (user: User, isAdmin: boolean): UseFirestoreData
     const saveSitesTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const isLoadingRef = useRef(true);
 
+    // Refs for deep equality check to prevent infinite save loops causing memory leaks
+    const lastSavedEmployeesRef = useRef<string>('');
+    const lastSavedSitesRef = useRef<string>('');
+
     // Controlla se ci sono dati locali
     useEffect(() => {
         const hasLocal =
@@ -92,8 +96,11 @@ export const useFirestoreData = (user: User, isAdmin: boolean): UseFirestoreData
                 ]);
 
                 // Ogni utente parte con i propri dati (vuoti per i nuovi account)
-                setEmployeesState(emps.map(sanitize));
+                const sanitizedEmps = emps.map(sanitize);
+                setEmployeesState(sanitizedEmps);
                 setSitesState(stes);
+                lastSavedEmployeesRef.current = JSON.stringify(sanitizedEmps);
+                lastSavedSitesRef.current = JSON.stringify(stes);
                 setSyncStatus('synced');
             } catch (e) {
                 console.error('Errore caricamento dati:', e);
@@ -111,17 +118,21 @@ export const useFirestoreData = (user: User, isAdmin: boolean): UseFirestoreData
         setEmployeesState(prev => {
             const next = typeof value === 'function' ? value(prev) : value;
             if (!isLoadingRef.current) {
-                setSyncStatus('saving');
-                if (saveEmployeesTimerRef.current) clearTimeout(saveEmployeesTimerRef.current);
-                saveEmployeesTimerRef.current = setTimeout(async () => {
-                    try {
-                        await saveEmployees(user.uid, next);
-                        setSyncStatus('synced');
-                    } catch (e) {
-                        console.error('Errore salvataggio dipendenti:', e);
-                        setSyncStatus('error');
-                    }
-                }, 1200);
+                const nextString = JSON.stringify(next);
+                if (nextString !== lastSavedEmployeesRef.current) {
+                    setSyncStatus('saving');
+                    if (saveEmployeesTimerRef.current) clearTimeout(saveEmployeesTimerRef.current);
+                    saveEmployeesTimerRef.current = setTimeout(async () => {
+                        try {
+                            lastSavedEmployeesRef.current = nextString;
+                            await saveEmployees(user.uid, next);
+                            setSyncStatus('synced');
+                        } catch (e) {
+                            console.error('Errore salvataggio dipendenti:', e);
+                            setSyncStatus('error');
+                        }
+                    }, 1200);
+                }
             }
             return next;
         });
@@ -132,17 +143,21 @@ export const useFirestoreData = (user: User, isAdmin: boolean): UseFirestoreData
         setSitesState(prev => {
             const next = typeof value === 'function' ? value(prev) : value;
             if (!isLoadingRef.current) {
-                setSyncStatus('saving');
-                if (saveSitesTimerRef.current) clearTimeout(saveSitesTimerRef.current);
-                saveSitesTimerRef.current = setTimeout(async () => {
-                    try {
-                        await saveSites(user.uid, next);
-                        setSyncStatus('synced');
-                    } catch (e) {
-                        console.error('Errore salvataggio cantieri:', e);
-                        setSyncStatus('error');
-                    }
-                }, 1200);
+                const nextString = JSON.stringify(next);
+                if (nextString !== lastSavedSitesRef.current) {
+                    setSyncStatus('saving');
+                    if (saveSitesTimerRef.current) clearTimeout(saveSitesTimerRef.current);
+                    saveSitesTimerRef.current = setTimeout(async () => {
+                        try {
+                            lastSavedSitesRef.current = nextString;
+                            await saveSites(user.uid, next);
+                            setSyncStatus('synced');
+                        } catch (e) {
+                            console.error('Errore salvataggio cantieri:', e);
+                            setSyncStatus('error');
+                        }
+                    }, 1200);
+                }
             }
             return next;
         });
