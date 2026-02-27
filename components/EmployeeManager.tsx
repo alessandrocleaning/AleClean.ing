@@ -903,7 +903,7 @@ export const EmployeeManager: React.FC<Props> = ({ employees, sites, setEmployee
                                 </div>
 
                                 {isOpen && (
-                                    <div className="p-4 md:p-6 bg-gray-50/50 border-t border-gray-100 flex flex-col xl:flex-row gap-6 animate-fade-in-up">
+                                    <div className="p-4 md:p-6 bg-gray-50/50 border-t border-gray-100 flex flex-col gap-6 animate-fade-in-up">
                                         <div className="flex-1 flex flex-col gap-6">
                                             <div
                                                 className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 min-h-[200px] transition-colors flex flex-col relative"
@@ -1195,8 +1195,8 @@ export const EmployeeManager: React.FC<Props> = ({ employees, sites, setEmployee
                                             </div>
                                         </div>
 
-                                        <div className="w-full xl:w-60 min-w-0">
-                                            <div className="bg-white rounded-xl shadow-sm border border-gray-200 sticky top-4 overflow-hidden transition-all duration-300">
+                                        <div className="w-full min-w-0">
+                                            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden transition-all duration-300">
                                                 <button onClick={() => setIsPaletteOpen(!isPaletteOpen)} className="w-full p-4 flex items-center justify-between bg-white hover:bg-gray-50 transition-colors group">
                                                     <h4 className="text-sm font-bold text-gray-800 flex items-center gap-2 group-hover:text-[#004aad] transition-colors uppercase tracking-wide"><Briefcase className="w-4 h-4 text-[#ffec09] fill-[#ffec09]" /> Aggiungi Cantiere</h4>
                                                     {isPaletteOpen ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}

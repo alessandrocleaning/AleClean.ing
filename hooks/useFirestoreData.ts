@@ -62,7 +62,8 @@ export const useFirestoreData = (user: User, isAdmin: boolean): UseFirestoreData
     const [syncStatus, setSyncStatus] = useState<SyncStatus>('loading');
     const [hasMigratableData, setHasMigratableData] = useState(false);
 
-    const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const saveEmployeesTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const saveSitesTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const isLoadingRef = useRef(true);
 
     // Controlla se ci sono dati locali
@@ -111,8 +112,8 @@ export const useFirestoreData = (user: User, isAdmin: boolean): UseFirestoreData
             const next = typeof value === 'function' ? value(prev) : value;
             if (!isLoadingRef.current) {
                 setSyncStatus('saving');
-                if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-                saveTimerRef.current = setTimeout(async () => {
+                if (saveEmployeesTimerRef.current) clearTimeout(saveEmployeesTimerRef.current);
+                saveEmployeesTimerRef.current = setTimeout(async () => {
                     try {
                         await saveEmployees(user.uid, next);
                         setSyncStatus('synced');
@@ -132,8 +133,8 @@ export const useFirestoreData = (user: User, isAdmin: boolean): UseFirestoreData
             const next = typeof value === 'function' ? value(prev) : value;
             if (!isLoadingRef.current) {
                 setSyncStatus('saving');
-                if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-                saveTimerRef.current = setTimeout(async () => {
+                if (saveSitesTimerRef.current) clearTimeout(saveSitesTimerRef.current);
+                saveSitesTimerRef.current = setTimeout(async () => {
                     try {
                         await saveSites(user.uid, next);
                         setSyncStatus('synced');
