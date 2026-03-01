@@ -358,7 +358,7 @@ const App: React.FC<{ user: User; isAdmin: boolean }> = ({ user, isAdmin }) => {
         )}
 
         {/* AI Agent Data Injector - Enabled for Revenue Injection */}
-        <AgentDataInjector employees={employees} setEmployees={setEmployees} sites={sites} setSites={setSites} />
+        {/* <AgentDataInjector employees={employees} setEmployees={setEmployees} sites={sites} setSites={setSites} /> */}
 
         <div className="p-4 md:p-8 w-full min-h-full animate-fade-in-up">
 

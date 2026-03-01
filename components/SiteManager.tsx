@@ -428,8 +428,8 @@ export const SiteManager: React.FC<Props> = ({ sites, setSites, employees, setEm
                         value={filterCategory}
                         onChange={e => setFilterCategory(e.target.value as SiteCategory | '')}
                         className={`text-xs font-bold px-2 py-1 rounded-lg border outline-none transition-colors cursor-pointer ${filterCategory
-                                ? `${CATEGORY_COLORS[filterCategory as SiteCategory].bg} ${CATEGORY_COLORS[filterCategory as SiteCategory].text} ${CATEGORY_COLORS[filterCategory as SiteCategory].border}`
-                                : 'bg-white text-gray-500 border-gray-200 hover:border-[#004aad]'
+                            ? `${CATEGORY_COLORS[filterCategory as SiteCategory].bg} ${CATEGORY_COLORS[filterCategory as SiteCategory].text} ${CATEGORY_COLORS[filterCategory as SiteCategory].border}`
+                            : 'bg-white text-gray-500 border-gray-200 hover:border-[#004aad]'
                             }`}
                     >
                         <option value="">Tutte le categorie</option>
@@ -494,6 +494,30 @@ export const SiteManager: React.FC<Props> = ({ sites, setSites, employees, setEm
 
             {/* LISTA VERTICALE CANTIERI */}
             <div className="flex flex-col gap-3">
+
+                {/* INTESTAZIONI COLONNE - struttura identica alle righe dati per allineamento perfetto */}
+                {filteredSites.length > 0 && (
+                    <div className="hidden md:flex items-center gap-3 py-1.5 px-3 bg-gray-50/80 border border-gray-100 rounded-xl shadow-sm mb-1">
+                        {/* Drag handle placeholder - stessa larghezza dell'icona GripVertical */}
+                        {!searchTerm && <div className="w-5 flex-shrink-0" />}
+                        {/* Numero placeholder - w-7 come il testo numerico */}
+                        <div className="w-7 flex-shrink-0 hidden md:block" />
+                        {/* Griglia colonne: identica a quella nella vista dati */}
+                        <div className="flex-1 min-w-0 grid grid-cols-[minmax(0,1fr)_auto] md:grid-cols-[1.5fr_1.5fr_1fr_1fr] lg:grid-cols-[2fr_1.5fr_120px_1fr_1fr] gap-1 md:gap-3 items-center">
+                            <div className="text-[10px] font-black tracking-widest text-gray-400 uppercase order-1">Nome</div>
+                            <div className="text-[10px] font-black tracking-widest text-gray-400 uppercase order-2 md:order-2">Indirizzo</div>
+                            <div className="hidden lg:block text-[10px] font-black tracking-widest text-gray-400 uppercase order-3 text-left">Categoria</div>
+                            <div className="text-[10px] font-black tracking-widest text-gray-400 uppercase order-4 text-center">Imponibile</div>
+                            <div className="text-[10px] font-black tracking-widest text-gray-400 uppercase order-5 text-right">Dipendenti</div>
+                        </div>
+                        {/* Pulsanti azioni placeholder: 2 bottoni da p-2 con icone w-4 = ~68px */}
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                            <div className="w-8 h-8" />
+                            <div className="w-8 h-8" />
+                        </div>
+                    </div>
+                )}
+
                 {filteredSites.map((site, index) => {
                     const isEditing = editingId === site.id;
                     const isDragging = draggedIndex === index;
