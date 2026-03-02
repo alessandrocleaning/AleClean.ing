@@ -99,13 +99,9 @@ const TimeInput = ({
     }, [value]);
 
     const commit = (newHh: string, newMm: string) => {
-        const h = parseInt(newHh);
-        const m = parseInt(newMm);
-        if (!isNaN(h) && !isNaN(m)) {
-            const hStr = h.toString().padStart(2, '0');
-            const mStr = m.toString().padStart(2, '0');
-            onChange(`${hStr}:${mStr}`);
-        } else if (newHh === '' && newMm === '') {
+        if (newHh || newMm) {
+            onChange(`${newHh || '00'}:${newMm || '00'}`);
+        } else {
             onChange('');
         }
     };
@@ -130,6 +126,14 @@ const TimeInput = ({
         commit(hh, v);
     };
 
+    const handleBlur = () => {
+        if (hh || mm) {
+            const paddedHh = hh ? hh.padStart(2, '0') : '00';
+            const paddedMm = mm ? mm.padStart(2, '0') : '00';
+            onChange(`${paddedHh}:${paddedMm}`);
+        }
+    };
+
     const baseInput = "w-8 text-center text-base font-black text-gray-800 bg-transparent outline-none border-b-2 border-gray-200 focus:border-indigo-500 transition-all py-1 appearance-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none";
 
     return (
@@ -139,6 +143,7 @@ const TimeInput = ({
                 inputMode="numeric"
                 value={hh}
                 onChange={handleHhChange}
+                onBlur={handleBlur}
                 onKeyDown={(e) => { if (e.key === 'Enter') mmRef.current?.focus(); }}
                 onFocus={(e) => e.target.select()}
                 placeholder="--"
@@ -152,6 +157,7 @@ const TimeInput = ({
                 inputMode="numeric"
                 value={mm}
                 onChange={handleMmChange}
+                onBlur={handleBlur}
                 onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
                 onFocus={(e) => e.target.select()}
                 placeholder="--"
