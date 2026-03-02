@@ -1248,15 +1248,15 @@ export const EmployeeManager: React.FC<Props> = ({ employees, sites, setEmployee
                                                                                 key={site.id}
                                                                                 className={`flex items-center gap-3 p-3 rounded-lg text-sm font-medium border transition-all ${isAssigned ? 'bg-gray-50 text-gray-400 border-gray-100 opacity-60' : 'bg-white text-gray-700 border-gray-200 hover:border-[#004aad] hover:shadow-sm hover:bg-blue-50/50'}`}
                                                                             >
-                                                                                <span className="truncate font-semibold flex-1">{site.name}</span>
                                                                                 {isAssigned
-                                                                                    ? <span className="text-[10px] bg-gray-200 px-2 py-0.5 rounded font-bold text-gray-500 flex-shrink-0">✓ Aggiunto</span>
+                                                                                    ? <span className="text-[10px] bg-gray-200 px-2 py-0.5 rounded font-bold text-gray-500 flex-shrink-0">✓</span>
                                                                                     : <button
                                                                                         onClick={() => { addSiteDirectly(emp.id, site.id); }}
                                                                                         className="flex-shrink-0 w-7 h-7 rounded-full bg-[#004aad] text-white flex items-center justify-center hover:bg-[#003580] transition-colors shadow-sm font-black text-base leading-none"
                                                                                         title={`Aggiungi ${site.name}`}
                                                                                     >+</button>
                                                                                 }
+                                                                                <span className="truncate font-semibold flex-1">{site.name}</span>
                                                                             </div>
                                                                         );
                                                                     })}
