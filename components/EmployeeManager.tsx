@@ -878,7 +878,7 @@ export const EmployeeManager: React.FC<Props> = ({ employees, sites, setEmployee
                                 >
                                     {isDraggable && <div className="mr-3 text-gray-300 group-hover:text-[#004aad] cursor-grab active:cursor-grabbing transition-colors"><GripVertical className="w-5 h-5" /></div>}
 
-                                    <div className="flex items-center gap-3 flex-1">
+                                    <div className="flex items-center gap-3 flex-1 min-w-0">
                                         <div className={`w-9 h-9 rounded-lg flex items-center justify-center text-sm font-black flex-shrink-0 shadow-sm transition-all ${isOpen ? 'bg-[#004aad] text-white rotate-3 scale-110' : 'bg-gray-100 text-gray-500 group-hover:bg-blue-50 group-hover:text-[#004aad]'}`}>
                                             {emp.firstName.charAt(0)}{emp.lastName.charAt(0)}
                                         </div>
@@ -889,20 +889,38 @@ export const EmployeeManager: React.FC<Props> = ({ employees, sites, setEmployee
                                                 <input type="text" value={editLastName} onChange={(e) => setEditLastName(e.target.value)} className="flex-1 px-3 py-2 rounded-lg text-black bg-white outline-none border-2 border-blue-200 focus:border-[#004aad]" placeholder="Cognome" />
                                             </div>
                                         ) : (
-                                            <div className="flex flex-col">
-                                                <h3 className="font-bold text-gray-800 text-sm leading-tight group-hover:text-[#004aad] transition-colors">{emp.firstName} {emp.lastName}</h3>
-                                                <div className="flex items-center gap-3">
-                                                    <span className="text-xs font-medium text-gray-400 uppercase tracking-wider flex items-center gap-1">
+                                            <>
+                                                {/* Mobile/tablet: stacked layout (originale) */}
+                                                <div className="flex flex-col lg:hidden">
+                                                    <h3 className="font-bold text-gray-800 text-sm leading-tight group-hover:text-[#004aad] transition-colors">{emp.firstName} {emp.lastName}</h3>
+                                                    <div className="flex items-center gap-3">
+                                                        <span className="text-xs font-medium text-gray-400 uppercase tracking-wider flex items-center gap-1">
+                                                            <Clock className="w-3 h-3" /> Contratto:
+                                                            <span className={`font-bold px-1.5 py-0.5 rounded ${isOpen ? 'bg-[#ffec09] text-black' : 'bg-gray-100 text-gray-600'}`}>{totalContractHours}h</span>
+                                                        </span>
+                                                        {totalEuroDifference !== 0 && (
+                                                            <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${totalEuroDifference > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'}`}>
+                                                                {totalEuroDifference > 0 ? '+' : ''}{totalEuroDifference.toFixed(2)}€
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </div>
+
+                                                {/* Desktop: full-width horizontal layout */}
+                                                <div className="hidden lg:flex items-center flex-1 min-w-0 gap-4">
+                                                    <h3 className="font-bold text-gray-800 text-sm leading-tight group-hover:text-[#004aad] transition-colors whitespace-nowrap">{emp.firstName} {emp.lastName}</h3>
+                                                    <div className="flex-1 border-b border-dashed border-gray-200 mx-2" />
+                                                    <span className="text-xs font-medium text-gray-400 uppercase tracking-wider flex items-center gap-1 whitespace-nowrap flex-shrink-0">
                                                         <Clock className="w-3 h-3" /> Contratto:
                                                         <span className={`font-bold px-1.5 py-0.5 rounded ${isOpen ? 'bg-[#ffec09] text-black' : 'bg-gray-100 text-gray-600'}`}>{totalContractHours}h</span>
                                                     </span>
                                                     {totalEuroDifference !== 0 && (
-                                                        <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${totalEuroDifference > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'}`}>
+                                                        <span className={`text-xs font-bold px-2 py-0.5 rounded-full flex-shrink-0 ${totalEuroDifference > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'}`}>
                                                             {totalEuroDifference > 0 ? '+' : ''}{totalEuroDifference.toFixed(2)}€
                                                         </span>
                                                     )}
                                                 </div>
-                                            </div>
+                                            </>
                                         )}
                                     </div>
 
