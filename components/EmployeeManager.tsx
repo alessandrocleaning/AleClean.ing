@@ -1256,7 +1256,10 @@ export const EmployeeManager: React.FC<Props> = ({ employees, sites, setEmployee
                                                                                         title={`Aggiungi ${site.name}`}
                                                                                     >+</button>
                                                                                 }
-                                                                                <span className="truncate font-semibold flex-1">{site.name}</span>
+                                                                                <div className="flex flex-col flex-1 min-w-0">
+                                                                                    <span className="truncate font-semibold text-sm">{site.name}</span>
+                                                                                    {site.city && <span className="text-[10px] text-gray-400 font-medium truncate">{site.city}</span>}
+                                                                                </div>
                                                                             </div>
                                                                         );
                                                                     })}
