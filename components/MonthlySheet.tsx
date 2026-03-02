@@ -71,6 +71,97 @@ const MonthPickerOverlay = ({
 };
 
 // --- SUB-COMPONENT: TIME ENTRY MODAL ---
+// --- SUB-COMPONENT: TIME INPUT (HH:MM) ---
+// Mostra due box separati Ore e Minuti per un inserimento fluido
+const TimeInput = ({
+    value,
+    onChange,
+    placeholder = "--",
+}: {
+    value: string;
+    onChange: (val: string) => void;
+    placeholder?: string;
+}) => {
+    const [hh, setHh] = React.useState('');
+    const [mm, setMm] = React.useState('');
+    const mmRef = React.useRef<HTMLInputElement>(null);
+
+    // Sync from prop value (HH:MM string) → local state
+    React.useEffect(() => {
+        if (value && value.includes(':')) {
+            const [h, m] = value.split(':');
+            setHh(h || '');
+            setMm(m || '');
+        } else {
+            setHh('');
+            setMm('');
+        }
+    }, [value]);
+
+    const commit = (newHh: string, newMm: string) => {
+        const h = parseInt(newHh);
+        const m = parseInt(newMm);
+        if (!isNaN(h) && !isNaN(m)) {
+            const hStr = h.toString().padStart(2, '0');
+            const mStr = m.toString().padStart(2, '0');
+            onChange(`${hStr}:${mStr}`);
+        } else if (newHh === '' && newMm === '') {
+            onChange('');
+        }
+    };
+
+    const handleHhChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        let v = e.target.value.replace(/\D/g, '').slice(0, 2);
+        // Clamp 0-23
+        if (v.length === 2 && parseInt(v) > 23) v = '23';
+        setHh(v);
+        if (v.length === 2) {
+            mmRef.current?.focus();
+            mmRef.current?.select();
+        }
+        commit(v, mm);
+    };
+
+    const handleMmChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        let v = e.target.value.replace(/\D/g, '').slice(0, 2);
+        // Clamp 0-59
+        if (v.length === 2 && parseInt(v) > 59) v = '59';
+        setMm(v);
+        commit(hh, v);
+    };
+
+    const baseInput = "w-8 text-center text-base font-black text-gray-800 bg-transparent outline-none border-b-2 border-gray-200 focus:border-indigo-500 transition-all py-1 appearance-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none";
+
+    return (
+        <div className="flex items-center justify-center gap-0.5">
+            <input
+                type="text"
+                inputMode="numeric"
+                value={hh}
+                onChange={handleHhChange}
+                onKeyDown={(e) => { if (e.key === 'Enter') mmRef.current?.focus(); }}
+                onFocus={(e) => e.target.select()}
+                placeholder="--"
+                maxLength={2}
+                className={baseInput}
+            />
+            <span className="text-gray-400 font-black text-base mb-0.5">:</span>
+            <input
+                ref={mmRef}
+                type="text"
+                inputMode="numeric"
+                value={mm}
+                onChange={handleMmChange}
+                onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
+                onFocus={(e) => e.target.select()}
+                placeholder="--"
+                maxLength={2}
+                className={baseInput}
+            />
+        </div>
+    );
+};
+
 interface TimeEntryModalProps {
     employee: Employee;
     year: number;
@@ -156,21 +247,14 @@ const TimeEntryModal = ({ employee, year, month, daysInMonth, currentOverrides, 
 
     const days = Array.from({ length: daysInMonth }, (_, i) => i + 1);
 
-    // Balanced grid for alignment: Date | In | Out | BrkIn | BrkOut | Total
-    const GRID_COLS_CLASS = "grid grid-cols-[50px_1fr_1fr_1fr_1fr_80px]";
+    // Balanced grid: Date | In | Out | BrkIn | BrkOut | Total
+    const GRID_COLS_CLASS = "grid grid-cols-[56px_1fr_1fr_1fr_1fr_72px]";
 
-    const renderTimeInput = (day: number, field: keyof TimeDetails, value: string, placeholder: string = "--:--") => (
-        <div className="flex justify-center w-full items-center">
-            <input
-                type={value ? "time" : "text"}
-                value={value}
-                onChange={(e) => handleTimeChange(day, field, e.target.value)}
-                onFocus={(e) => (e.target.type = "time")}
-                onBlur={(e) => { if (!e.target.value) e.target.type = "text"; }}
-                placeholder={placeholder}
-                className="w-full max-w-[75px] p-1 border-b border-gray-200 bg-transparent text-center text-sm text-gray-800 font-bold focus:border-indigo-500 outline-none transition-all placeholder-gray-300 focus:placeholder-transparent"
-            />
-        </div>
+    const renderTimeInput = (day: number, field: keyof TimeDetails, value: string) => (
+        <TimeInput
+            value={value}
+            onChange={(val) => handleTimeChange(day, field, val)}
+        />
     );
 
     return (
