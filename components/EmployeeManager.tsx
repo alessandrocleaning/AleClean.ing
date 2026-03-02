@@ -910,15 +910,20 @@ export const EmployeeManager: React.FC<Props> = ({ employees, sites, setEmployee
                                                 <div className="hidden lg:flex items-center flex-1 min-w-0 gap-4">
                                                     <h3 className="font-bold text-gray-800 text-sm leading-tight group-hover:text-[#004aad] transition-colors whitespace-nowrap">{emp.firstName} {emp.lastName}</h3>
                                                     <div className="flex-1 border-b border-dashed border-gray-200 mx-2" />
-                                                    <span className="text-xs font-medium text-gray-400 uppercase tracking-wider flex items-center gap-1 whitespace-nowrap flex-shrink-0">
-                                                        <Clock className="w-3 h-3" /> Contratto:
-                                                        <span className={`font-bold px-1.5 py-0.5 rounded ${isOpen ? 'bg-[#ffec09] text-black' : 'bg-gray-100 text-gray-600'}`}>{totalContractHours}h</span>
-                                                    </span>
-                                                    {totalEuroDifference !== 0 && (
-                                                        <span className={`text-xs font-bold px-2 py-0.5 rounded-full flex-shrink-0 ${totalEuroDifference > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'}`}>
-                                                            {totalEuroDifference > 0 ? '+' : ''}{totalEuroDifference.toFixed(2)}€
-                                                        </span>
-                                                    )}
+                                                    {/* Colonna CONTRATTO — larghezza fissa per allineamento */}
+                                                    <div className="w-[130px] flex items-center justify-end gap-1 flex-shrink-0">
+                                                        <Clock className="w-3 h-3 text-gray-400" />
+                                                        <span className="text-xs font-medium text-gray-400 uppercase tracking-wider">Contratto:</span>
+                                                        <span className={`font-bold text-xs px-1.5 py-0.5 rounded ${isOpen ? 'bg-[#ffec09] text-black' : 'bg-gray-100 text-gray-600'}`}>{totalContractHours}h</span>
+                                                    </div>
+                                                    {/* Colonna € — larghezza fissa per allineamento */}
+                                                    <div className="w-[90px] flex items-center justify-end flex-shrink-0">
+                                                        {totalEuroDifference !== 0 ? (
+                                                            <span className={`text-xs font-bold px-2 py-0.5 rounded-full tabular-nums ${totalEuroDifference > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'}`}>
+                                                                {totalEuroDifference > 0 ? '+' : ''}{totalEuroDifference.toFixed(2)}€
+                                                            </span>
+                                                        ) : <span className="text-gray-200 text-xs">—</span>}
+                                                    </div>
                                                 </div>
                                             </>
                                         )}
