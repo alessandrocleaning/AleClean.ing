@@ -70,6 +70,11 @@ const HourInput = ({
             value={localVal}
             onChange={handleChange}
             onBlur={handleBlur}
+            onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                    e.currentTarget.blur();
+                }
+            }}
             className={className}
         />
     );
@@ -247,6 +252,7 @@ const AssignmentConfigModal = ({
                                     type="number"
                                     value={localAssign.forfaitAmount || ''}
                                     onChange={(e) => updateLocal('forfaitAmount', parseFloat(e.target.value) || 0)}
+                                    onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
                                     className={`w-full pl-6 pr-3 py-2 text-sm border border-purple-200 rounded bg-purple-50/30 outline-none focus:border-purple-400 font-bold text-purple-700 ${NO_SPINNER_CLASS}`}
                                     placeholder="Importo Forfait"
                                 />
@@ -637,42 +643,43 @@ export const EmployeeManager: React.FC<Props> = ({ employees, sites, setEmployee
         e.stopPropagation();
 
         if (draggedSiteId) {
-            setEmployees(prev => {
-                const empIndex = prev.findIndex(e => e.id === targetEmpId);
-                if (empIndex === -1) return prev;
-
-                const emp = prev[empIndex];
-                const safeAssignments = emp.defaultAssignments || [];
-
-                if (safeAssignments.some(a => a.siteId === draggedSiteId)) {
-                    alert("Questo cantiere è già assegnato. Usa 'Duplica' se vuoi aggiungere un'altra riga per lo stesso cantiere.");
-                    return prev;
-                }
-
-                const newAssign: Assignment = {
-                    siteId: draggedSiteId,
-                    startDate: new Date().toISOString().split('T')[0],
-                    schedule: { mon: 0, tue: 0, wed: 0, thu: 0, fri: 0, sat: 0, sun: 0 },
-                    type: 'HOURLY',
-                    forfaitAmount: 0,
-                    recurrence: 'WEEKLY',
-                    interval: 1,
-                    weekSelector: [],
-                    archived: false,
-                    note: ''
-                };
-
-                const newAssignments = [...safeAssignments];
-                if (targetIndex !== undefined) newAssignments.splice(targetIndex, 0, newAssign);
-                else newAssignments.push(newAssign);
-
-                const newEmp = { ...emp, defaultAssignments: newAssignments };
-                const newAll = [...prev];
-                newAll[empIndex] = newEmp;
-                return newAll;
-            });
+            addSiteDirectly(targetEmpId, draggedSiteId);
             setDraggedSiteId(null);
         }
+    };
+
+    // Aggiunge un cantiere direttamente al piano di lavoro del dipendente (senza drag)
+    const addSiteDirectly = (targetEmpId: string, siteId: string) => {
+        setEmployees(prev => {
+            const empIndex = prev.findIndex(e => e.id === targetEmpId);
+            if (empIndex === -1) return prev;
+
+            const emp = prev[empIndex];
+            const safeAssignments = emp.defaultAssignments || [];
+
+            if (safeAssignments.some(a => a.siteId === siteId && !a.archived)) {
+                alert("Questo cantiere è già assegnato. Usa 'Duplica' se vuoi aggiungere un'altra riga per lo stesso cantiere.");
+                return prev;
+            }
+
+            const newAssign: Assignment = {
+                siteId,
+                startDate: new Date().toISOString().split('T')[0],
+                schedule: { mon: 0, tue: 0, wed: 0, thu: 0, fri: 0, sat: 0, sun: 0 },
+                type: 'HOURLY',
+                forfaitAmount: 0,
+                recurrence: 'WEEKLY',
+                interval: 1,
+                weekSelector: [],
+                archived: false,
+                note: ''
+            };
+
+            const newEmp = { ...emp, defaultAssignments: [...safeAssignments, newAssign] };
+            const newAll = [...prev];
+            newAll[empIndex] = newEmp;
+            return newAll;
+        });
     };
 
     const handleDragOver = (e: React.DragEvent) => {
@@ -836,18 +843,38 @@ export const EmployeeManager: React.FC<Props> = ({ employees, sites, setEmployee
                         return (
                             <div
                                 key={emp.id}
-                                draggable={isDraggable}
+                                draggable={isDraggable && !draggedSiteId}
                                 onDragStart={(e) => handleEmpDragStart(e, index)}
-                                onDragOver={(e) => handleEmpDragOver(e, index)}
+                                onDragOver={(e) => {
+                                    e.preventDefault();
+                                    if (draggedSiteId) {
+                                        e.dataTransfer.dropEffect = 'copy';
+                                    } else {
+                                        handleEmpDragOver(e, index);
+                                    }
+                                }}
+                                onDrop={(e) => {
+                                    if (draggedSiteId) {
+                                        handleDrop(e, emp.id);
+                                    }
+                                }}
                                 onDragEnd={handleEmpDragEnd}
                                 className={`rounded-xl overflow-hidden transition-all duration-300 group
                 ${isOpen ? 'ring-2 ring-[#004aad] shadow-xl bg-white scale-[1.005]' : 'bg-white border border-gray-200 hover:shadow-md hover:border-blue-200'}
                 ${draggedEmpIndex === index ? 'opacity-40 border-dashed border-2 border-blue-400' : ''}
+                ${draggedSiteId ? 'ring-2 ring-blue-300 border-blue-200' : ''}
               `}
                             >
                                 <div
-                                    className={`py-2 px-3 flex justify-between items-center cursor-pointer transition-colors ${isOpen ? 'bg-gray-50/50' : 'bg-white'}`}
-                                    onClick={() => !isEditing && toggleEmployee(emp.id)}
+                                    className={`py-2 px-3 flex justify-between items-center cursor-pointer transition-colors ${isOpen ? 'bg-gray-50/50' : draggedSiteId ? 'bg-blue-50' : 'bg-white'}`}
+                                    onClick={() => {
+                                        if (!isEditing) {
+                                            // Se viene cliccato mentre si sta trascinando un cantiere, apri la card
+                                            toggleEmployee(emp.id);
+                                        }
+                                    }}
+                                    onDrop={(e) => { if (draggedSiteId) handleDrop(e, emp.id); }}
+                                    onDragOver={(e) => { if (draggedSiteId) { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; } }}
                                 >
                                     {isDraggable && <div className="mr-3 text-gray-300 group-hover:text-[#004aad] cursor-grab active:cursor-grabbing transition-colors"><GripVertical className="w-5 h-5" /></div>}
 
@@ -984,6 +1011,7 @@ export const EmployeeManager: React.FC<Props> = ({ employees, sites, setEmployee
                                                                                     type="text"
                                                                                     value={assign.note || ''}
                                                                                     onChange={(e) => updateAssignmentField(emp.id, index, 'note', e.target.value)}
+                                                                                    onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
                                                                                     placeholder="Scrivi appunti..."
                                                                                     className="w-full text-xs border-b border-transparent focus:border-blue-300 outline-none bg-transparent text-gray-600 truncate placeholder-gray-300 focus:bg-white transition-colors py-1"
                                                                                 />
@@ -1142,6 +1170,7 @@ export const EmployeeManager: React.FC<Props> = ({ employees, sites, setEmployee
                                                                             step="0.5"
                                                                             value={emp.hourlyRate || ''}
                                                                             onChange={(e) => updateHourlyRate(emp.id, e.target.value)}
+                                                                            onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
                                                                             className={`w-full text-right text-sm font-bold text-emerald-700 outline-none bg-transparent pr-4 py-1 ${NO_SPINNER_CLASS}`}
                                                                             placeholder="0"
                                                                         />
@@ -1204,7 +1233,7 @@ export const EmployeeManager: React.FC<Props> = ({ employees, sites, setEmployee
 
                                                 {isPaletteOpen && (
                                                     <div className="p-4 pt-0 border-t border-gray-100 animate-fade-in bg-white">
-                                                        <p className="text-xs text-gray-400 mb-3 mt-3">Trascina il cantiere nella griglia.</p>
+                                                        <p className="text-xs text-gray-400 mb-3 mt-3">Clicca <strong className="text-[#004aad]">+</strong> per aggiungere il cantiere al piano di lavoro.</p>
                                                         <div className="relative mb-3">
                                                             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><Search className="h-4 w-4 text-gray-400" /></div>
                                                             <input type="text" placeholder="Cerca..." value={siteSearchTerm} onChange={(e) => setSiteSearchTerm(e.target.value)} className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg leading-5 bg-gray-50 placeholder-gray-400 focus:outline-none focus:border-[#004aad] focus:ring-1 focus:ring-[#004aad] sm:text-sm transition-colors" />
@@ -1213,18 +1242,21 @@ export const EmployeeManager: React.FC<Props> = ({ employees, sites, setEmployee
                                                             {sites.length > 0 ? (
                                                                 <>
                                                                     {sites.filter(s => s.name.toLowerCase().includes(siteSearchTerm.toLowerCase())).map(site => {
-                                                                        const isAssigned = assignments.some(a => a.siteId === site.id);
+                                                                        const isAssigned = assignments.some(a => a.siteId === site.id && !a.archived);
                                                                         return (
                                                                             <div
                                                                                 key={site.id}
-                                                                                draggable={!isAssigned}
-                                                                                onDragStart={(e) => handleSiteDragStart(e, site.id)}
-                                                                                onDragEnd={handleSiteDragEnd}
-                                                                                className={`flex items-center gap-3 p-3 rounded-lg text-sm font-medium border transition-all ${isAssigned ? 'bg-gray-50 text-gray-400 border-gray-100 cursor-not-allowed opacity-60' : 'bg-white text-gray-700 border-gray-200 cursor-grab hover:border-[#004aad] hover:shadow-md active:cursor-grabbing hover:bg-blue-50/50'}`}
+                                                                                className={`flex items-center gap-3 p-3 rounded-lg text-sm font-medium border transition-all ${isAssigned ? 'bg-gray-50 text-gray-400 border-gray-100 opacity-60' : 'bg-white text-gray-700 border-gray-200 hover:border-[#004aad] hover:shadow-sm hover:bg-blue-50/50'}`}
                                                                             >
-                                                                                <div className="bg-gray-100 p-1.5 rounded text-gray-400"><GripVertical className="w-3 h-3" /></div>
-                                                                                <span className="truncate font-semibold">{site.name}</span>
-                                                                                {isAssigned && <span className="ml-auto text-[10px] bg-gray-200 px-1.5 py-0.5 rounded font-bold text-gray-500">Preso</span>}
+                                                                                <span className="truncate font-semibold flex-1">{site.name}</span>
+                                                                                {isAssigned
+                                                                                    ? <span className="text-[10px] bg-gray-200 px-2 py-0.5 rounded font-bold text-gray-500 flex-shrink-0">✓ Aggiunto</span>
+                                                                                    : <button
+                                                                                        onClick={() => { addSiteDirectly(emp.id, site.id); }}
+                                                                                        className="flex-shrink-0 w-7 h-7 rounded-full bg-[#004aad] text-white flex items-center justify-center hover:bg-[#003580] transition-colors shadow-sm font-black text-base leading-none"
+                                                                                        title={`Aggiungi ${site.name}`}
+                                                                                    >+</button>
+                                                                                }
                                                                             </div>
                                                                         );
                                                                     })}

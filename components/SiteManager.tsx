@@ -388,7 +388,7 @@ export const SiteManager: React.FC<Props> = ({ sites, setSites, employees, setEm
             <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div className="flex items-center gap-4 text-sm font-medium text-gray-500">
                     <Building2 className="w-4 h-4 text-[#ffec09] fill-[#ffec09]" />
-                    <span>Totale Cantieri: <strong className="text-gray-900">{sites.length}</strong></span>
+                    <span>Totale Cantieri: <strong className="text-gray-900">{sites.filter(s => !s.name.startsWith('CLEAN.ING')).length}</strong></span>
                 </div>
 
                 <div className="relative w-full md:w-64">
@@ -495,22 +495,32 @@ export const SiteManager: React.FC<Props> = ({ sites, setSites, employees, setEm
             {/* LISTA VERTICALE CANTIERI */}
             <div className="flex flex-col gap-3">
 
-                {/* INTESTAZIONI COLONNE - struttura identica alle righe dati per allineamento perfetto */}
+                {/* INTESTAZIONI COLONNE — struttura identica alle righe dati per allineamento pixel-perfetto */}
                 {filteredSites.length > 0 && (
-                    <div className="hidden md:flex items-center gap-3 py-1.5 px-3 bg-gray-50/80 border border-gray-100 rounded-xl shadow-sm mb-1">
-                        {/* Drag handle placeholder - stessa larghezza dell'icona GripVertical */}
-                        {!searchTerm && <div className="w-5 flex-shrink-0" />}
-                        {/* Numero placeholder - w-7 come il testo numerico */}
-                        <div className="w-7 flex-shrink-0 hidden md:block" />
-                        {/* Griglia colonne: identica a quella nella vista dati */}
+                    <div className="flex items-center gap-3 py-1.5 px-3 bg-gray-50/80 border border-gray-100 rounded-xl shadow-sm mb-1">
+                        {/* Drag handle placeholder — GripVertical w-5 */}
+                        {!searchTerm && <div className="w-5 h-5 flex-shrink-0" />}
+
+                        {/* Numero placeholder — w-7 h-7, visibile solo da md */}
+                        <div className="w-7 h-7 flex-shrink-0 hidden md:block" />
+
+                        {/* Griglia IDENTICA a quella dei dati, con i MEDESIMI order- */}
                         <div className="flex-1 min-w-0 grid grid-cols-[minmax(0,1fr)_auto] md:grid-cols-[1.5fr_1.5fr_1fr_1fr] lg:grid-cols-[2fr_1.5fr_120px_1fr_1fr] gap-1 md:gap-3 items-center">
-                            <div className="text-[10px] font-black tracking-widest text-gray-400 uppercase order-1">Nome</div>
-                            <div className="text-[10px] font-black tracking-widest text-gray-400 uppercase order-2 md:order-2">Indirizzo</div>
-                            <div className="hidden lg:block text-[10px] font-black tracking-widest text-gray-400 uppercase order-3 text-left">Categoria</div>
-                            <div className="text-[10px] font-black tracking-widest text-gray-400 uppercase order-4 text-center">Imponibile</div>
-                            <div className="text-[10px] font-black tracking-widest text-gray-400 uppercase order-5 text-right">Dipendenti</div>
+                            {/* order-1 su mobile = Nome/Cantiere (riga 1 col 1) */}
+                            {/* pl-4 compensa il punto-dot (w-2) + gap-2 prima del testo nome */}
+                            <div className="text-[10px] font-black tracking-widest text-gray-400 uppercase order-1 md:order-1 lg:order-1 pl-4">Cantiere</div>
+                            {/* order-3 su mobile → order-2 su md = Indirizzo (riga 2 col 1 su mobile) */}
+                            {/* pl-6 compensa icona Map (w-3) + gap-1.5 + px-2 del badge indirizzo */}
+                            <div className="text-[10px] font-black tracking-widest text-gray-400 uppercase order-3 md:order-2 lg:order-2 hidden md:block pl-6">Indirizzo</div>
+                            {/* order-3 su lg = Categoria, visibile solo da lg */}
+                            <div className="hidden lg:block text-[10px] font-black tracking-widest text-gray-400 uppercase lg:order-3">Categoria</div>
+                            {/* order-4 su mobile → order-3 su md = Imponibile (riga 2 col 2 su mobile) */}
+                            <div className="text-[10px] font-black tracking-widest text-gray-400 uppercase order-4 md:order-3 lg:order-4 text-right md:text-center">Imponibile</div>
+                            {/* order-2 su mobile → order-4 su md = Dipendenti (riga 1 col 2 su mobile) */}
+                            <div className="text-[10px] font-black tracking-widest text-gray-400 uppercase order-2 md:order-4 lg:order-5 text-right hidden md:block">Dipendenti</div>
                         </div>
-                        {/* Pulsanti azioni placeholder: 2 bottoni da p-2 con icone w-4 = ~68px */}
+
+                        {/* Pulsanti azioni placeholder — 2 × w-8 h-8 con gap-2 */}
                         <div className="flex items-center gap-2 flex-shrink-0">
                             <div className="w-8 h-8" />
                             <div className="w-8 h-8" />
@@ -544,9 +554,19 @@ export const SiteManager: React.FC<Props> = ({ sites, setSites, employees, setEm
                             )}
 
                             {/* Numeric Indicator */}
-                            <div className="text-xs font-black text-gray-300 w-7 text-center hidden md:flex items-center justify-center bg-gray-50 rounded-md h-7 group-hover:text-[#004aad] group-hover:bg-blue-50 transition-colors">
-                                {index + 1}
-                            </div>
+                            {(() => {
+                                const isJolly = site.name.startsWith('CLEAN.ING');
+                                // Conta solo i cantieri non-jolly che vengono prima di questo nella lista filtrata
+                                const realIndex = isJolly ? 0 : filteredSites.filter((s, i) => i < index && !s.name.startsWith('CLEAN.ING')).length + 1;
+                                return (
+                                    <div className={`text-xs font-black w-7 text-center hidden md:flex items-center justify-center rounded-md h-7 transition-colors ${isJolly
+                                            ? 'text-blue-400 bg-blue-50 group-hover:text-[#004aad] group-hover:bg-blue-100'
+                                            : 'text-gray-300 bg-gray-50 group-hover:text-[#004aad] group-hover:bg-blue-50'
+                                        }`}>
+                                        {realIndex}
+                                    </div>
+                                );
+                            })()}
 
                             {/* Content */}
                             <div className="flex-1 min-w-0">

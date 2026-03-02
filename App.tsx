@@ -1,11 +1,11 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { ViewMode } from './types';
 import { EmployeeManager } from './components/EmployeeManager';
 import { SiteManager } from './components/SiteManager';
 import { MonthlySheet } from './components/MonthlySheet';
 import { MonthlyAllowanceSheet } from './components/MonthlyAllowanceSheet';
 import { AuthScreen } from './components/AuthScreen';
-import { Users, FileText, LayoutDashboard, MapPin, Menu, X, Wallet, Building2, TrendingUp, TrendingDown, BarChart3, Activity, PieChart as PieChartIcon, LogOut, Cloud, CloudOff, Loader } from 'lucide-react';
+import { Users, FileText, LayoutDashboard, MapPin, Menu, X, Wallet, Building2, TrendingUp, TrendingDown, BarChart3, Activity, PieChart as PieChartIcon, LogOut, Cloud, CloudOff, Loader, Euro, Percent, Zap, Landmark, ChevronUp, ChevronDown, Minus, Edit2, Check } from 'lucide-react';
 // (Nessun seed data — ogni utente parte con dati vuoti)
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { subMonths, format } from 'date-fns';
@@ -73,7 +73,11 @@ const AuthWrapper: React.FC = () => {
 };
 
 
-const CHART_COLORS = ['#004aad', '#fbbf24', '#10b981', '#f97316', '#8b5cf6', '#ec4899', '#6366f1', '#64748b'];
+const CHART_COLORS = [
+  '#004aad', '#f59e0b', '#10b981', '#ef4444', '#8b5cf6',
+  '#06b6d4', '#f97316', '#ec4899', '#84cc16', '#0ea5e9',
+  '#a855f7', '#14b8a6'
+];
 
 const App: React.FC<{ user: User; isAdmin: boolean }> = ({ user, isAdmin }) => {
   const [view, setView] = useState<ViewMode>('dashboard');
@@ -120,54 +124,123 @@ const App: React.FC<{ user: User; isAdmin: boolean }> = ({ user, isAdmin }) => {
     );
   };
 
+  // --- SALDO CASSA (manuale, salvato in localStorage) ---
+  const [saldoCassa, setSaldoCassa] = useState<number>(() => {
+    const saved = localStorage.getItem('dashboard_saldo_cassa');
+    return saved ? parseFloat(saved) : 0;
+  });
+  const [editingSaldo, setEditingSaldo] = useState(false);
+  const [saldoInput, setSaldoInput] = useState('');
+  const saldoRef = useRef<HTMLInputElement>(null);
+  const [activeTab, setActiveTab] = useState<'revenue' | 'hours'>('revenue');
+
+  const saveSaldo = () => {
+    const val = parseFloat(saldoInput.replace(',', '.'));
+    if (!isNaN(val)) {
+      setSaldoCassa(val);
+      localStorage.setItem('dashboard_saldo_cassa', String(val));
+    }
+    setEditingSaldo(false);
+  };
+
   // --- DASHBOARD STATISTICS CALCULATIONS ---
   const stats = useMemo(() => {
     const today = new Date();
     const lastMonth = subMonths(today, 1);
-
     const todayStr = format(today, 'yyyy-MM-dd');
     const lastMonthStr = format(lastMonth, 'yyyy-MM-dd');
+    const COSTO_ORA_CONTRATTO = 16; // €/ora fisso per ore da contratto
 
-    // Helper function to calculate metrics for a specific point in time
-    const calculateMetrics = (dateStr: string) => {
-      let hours = 0;
-      let contracts = 0;
-      let cost = 0;
+    // Helper: verifica se un assignment era attivo a una data
+    const isAssignmentActive = (assign: any, dateStr: string) =>
+      !assign.archived &&
+      assign.startDate <= dateStr &&
+      (!assign.endDate || assign.endDate >= dateStr);
 
+    // Helper: ore settimanali di un assignment
+    const weeklyHoursOf = (assign: any): number =>
+      Object.values(assign.schedule || {}).reduce((s: number, h: any) => s + (Number(h) || 0), 0) as number;
+
+    // --- ESCLUDI CANTIERE INTERNO "CLEAN.ING" da tutti i calcoli ---
+    const internalSiteIds = new Set(
+      sites.filter(s => s.name.trim().toLowerCase() === 'clean.ing').map(s => s.id)
+    );
+    const activeSites = sites.filter(s => !internalSiteIds.has(s.id));
+
+    // --- FATTURATO: somma netMonthlyRevenue di tutti i siti attivi (escluso interno) ---
+    const fatturatoMese = activeSites.reduce((sum, s) => sum + (s.netMonthlyRevenue || 0), 0);
+
+    // Fatturato stesso mese anno scorso: dato non storicizzato → stesso valore (n/d)
+    const fatturatoAnnoScorso: number | null = null; // non disponibile
+
+    // --- COSTO PERSONALE (mese corrente) ---
+    // Ogni dipendente: ore da contratto × 4.33 sett/mese × 16€/ora
+    // + ore extra (FORFait) × hourlyRate dipendente
+    let costoPersonaleMese = 0;
+    let oreContrattoTotali = 0;
+    let oreExtraTotali = 0;
+
+    employees.forEach(emp => {
+      (emp.defaultAssignments || []).forEach(assign => {
+        if (isAssignmentActive(assign, todayStr)) {
+          const wh = weeklyHoursOf(assign);
+          const oreMesaliContratto = wh * 4.33;
+          oreContrattoTotali += oreMesaliContratto;
+          costoPersonaleMese += oreMesaliContratto * COSTO_ORA_CONTRATTO;
+
+          if (assign.type === 'FORFAIT' && assign.forfaitAmount) {
+            // forfait: costo aggiuntivo → stimiamo ore extra come forfait / hourlyRate
+            const rate = emp.hourlyRate || COSTO_ORA_CONTRATTO;
+            const oreExtra = assign.forfaitAmount / rate;
+            oreExtraTotali += oreExtra;
+            costoPersonaleMese += assign.forfaitAmount;
+          }
+        }
+      });
+    });
+
+    // --- MARGINE LORDO ---
+    const margineAssoluto = fatturatoMese - costoPersonaleMese;
+    const marginePerc = fatturatoMese > 0
+      ? (margineAssoluto / fatturatoMese) * 100
+      : 0;
+
+    // Soglie margine: verde ≥ 30%, arancione 15–30%, rosso < 15%
+    const margineStatus: 'green' | 'orange' | 'red' =
+      marginePerc >= 30 ? 'green' : marginePerc >= 15 ? 'orange' : 'red';
+
+    // --- EFFICIENZA ECONOMICA ---
+    // Ricavo per euro di costo (fatturatoMese / costoPersonaleMese)
+    const efficienzaRatio = costoPersonaleMese > 0
+      ? fatturatoMese / costoPersonaleMese
+      : null;
+    const oreContratteMese = oreContrattoTotali; // già × 4.33
+
+    // --- CLIENTI ATTIVI: cantieri attivi (escluso interno) con revenue > 0 ---
+    const clientiAttivi = activeSites.filter(s => (s.netMonthlyRevenue || 0) > 0).length;
+
+    // --- METRICHE OPERAZIONALI (per grafici esistenti) ---
+    const calculateOps = (dateStr: string) => {
+      let hours = 0, contracts = 0, cost = 0;
       employees.forEach(emp => {
-        const assignments = emp.defaultAssignments || [];
-        assignments.forEach(assign => {
-          if (!assign.archived) {
-            // Check if assignment was active at that date
-            // Active if: StartDate <= TargetDate AND (EndDate is null OR EndDate >= TargetDate)
-            const isActive = assign.startDate <= dateStr && (!assign.endDate || assign.endDate >= dateStr);
-
-            if (isActive) {
-              contracts++;
-              const weeklyHours = Object.values(assign.schedule || {}).reduce((sum: number, h: any) => sum + (Number(h) || 0), 0) as number;
-              hours += weeklyHours;
-
-              const monthlyBase = (weeklyHours * 4.33 * (emp.hourlyRate || 0));
-              const forfait = assign.type === 'FORFAIT' ? (assign.forfaitAmount || 0) : 0;
-              cost += monthlyBase + forfait;
-            }
+        (emp.defaultAssignments || []).forEach(assign => {
+          if (isAssignmentActive(assign, dateStr)) {
+            contracts++;
+            const wh = weeklyHoursOf(assign);
+            hours += wh;
+            cost += wh * 4.33 * (emp.hourlyRate || 0);
+            if (assign.type === 'FORFAIT') cost += assign.forfaitAmount || 0;
           }
         });
       });
       return { hours, contracts, cost };
     };
 
-    // 1. Calculate Current Metrics
-    const current = calculateMetrics(todayStr);
+    const current = calculateOps(todayStr);
+    const previous = calculateOps(lastMonthStr);
 
-    // 2. Calculate Previous Month Metrics
-    const previous = calculateMetrics(lastMonthStr);
-
-    // 3. Calculate Variations
-    const getVariation = (curr: number, prev: number) => {
-      if (prev === 0) return curr > 0 ? 100 : 0;
-      return ((curr - prev) / prev) * 100;
-    };
+    const getVariation = (curr: number, prev: number) =>
+      prev === 0 ? (curr > 0 ? 100 : 0) : ((curr - prev) / prev) * 100;
 
     const variations = {
       hours: getVariation(current.hours, previous.hours),
@@ -175,54 +248,87 @@ const App: React.FC<{ user: User; isAdmin: boolean }> = ({ user, isAdmin }) => {
       cost: getVariation(current.cost, previous.cost)
     };
 
-    // 4. Site Distribution & Load (Current Data)
+    // --- PIE & SITE LOAD (escluso cantiere interno) ---
     const sitesDistribution: Record<string, number> = {};
     const assignmentsByCity: Record<string, number> = {};
     const sitesHours: Record<string, number> = {};
 
-    sites.forEach(s => {
+    activeSites.forEach(s => {
       const city = s.city ? s.city.trim() : 'Non specificato';
       sitesDistribution[city] = (sitesDistribution[city] || 0) + 1;
       sitesHours[s.id] = 0;
     });
 
     employees.forEach(emp => {
-      const assignments = emp.defaultAssignments || [];
-      assignments.forEach(assign => {
-        // Use current logic for charts (non-archived)
-        if (!assign.archived) {
-          const weeklyHours = Object.values(assign.schedule || {}).reduce((sum: number, h: any) => sum + (Number(h) || 0), 0) as number;
-
-          // Site load
-          if (sitesHours[assign.siteId] !== undefined) {
-            sitesHours[assign.siteId] += weeklyHours;
-          }
-
-          // Assignment by City (For Pie Chart)
-          const site = sites.find(s => s.id === assign.siteId);
+      (emp.defaultAssignments || []).forEach(assign => {
+        if (!assign.archived && !internalSiteIds.has(assign.siteId)) {
+          const wh = weeklyHoursOf(assign);
+          if (sitesHours[assign.siteId] !== undefined) sitesHours[assign.siteId] += wh;
+          const site = activeSites.find(s => s.id === assign.siteId);
           const city = site?.city ? site.city.trim() : 'Non specificato';
           assignmentsByCity[city] = (assignmentsByCity[city] || 0) + 1;
         }
       });
     });
 
-    const pieData = Object.entries(assignmentsByCity)
-      .map(([name, value]) => ({ name, value }))
+    const totalSitesForPie = Object.values(sitesDistribution).reduce((s, v) => s + v, 0);
+    const pieData = Object.entries(sitesDistribution)
+      .map(([name, value]) => ({
+        name,
+        value,
+        pct: totalSitesForPie > 0 ? Math.round((value / totalSitesForPie) * 100) : 0
+      }))
       .sort((a, b) => b.value - a.value);
 
     const sortedSitesLoad = Object.entries(sitesHours)
       .sort(([, a], [, b]) => b - a)
       .slice(0, 5)
-      .map(([id, hours]) => ({
-        name: sites.find(s => s.id === id)?.name || 'Sconosciuto',
-        hours
-      }))
+      .map(([id, hours]) => ({ name: activeSites.find(s => s.id === id)?.name || 'Sconosciuto', hours }))
       .filter(s => s.hours > 0);
 
-    const sortedCities = Object.entries(sitesDistribution)
-      .sort(([, a], [, b]) => b - a);
+    const sortedCities = Object.entries(sitesDistribution).sort(([, a], [, b]) => b - a);
+
+    // --- TOP CLIENTI PER FATTURATO ---
+    // Per ogni cantiere attivo: revenue, categoria, costo ore assegnate, margine %
+    const siteHourCost: Record<string, number> = {};
+    employees.forEach(emp => {
+      (emp.defaultAssignments || []).forEach(assign => {
+        if (isAssignmentActive(assign, todayStr) && !internalSiteIds.has(assign.siteId)) {
+          const wh = weeklyHoursOf(assign);
+          siteHourCost[assign.siteId] = (siteHourCost[assign.siteId] || 0) + wh * 4.33 * COSTO_ORA_CONTRATTO;
+          if (assign.type === 'FORFAIT' && assign.forfaitAmount) {
+            siteHourCost[assign.siteId] = (siteHourCost[assign.siteId] || 0) + assign.forfaitAmount;
+          }
+        }
+      });
+    });
+
+    const topClientsByRevenue = activeSites
+      .filter(s => (s.netMonthlyRevenue || 0) > 0)
+      .map(s => {
+        const rev = s.netMonthlyRevenue || 0;
+        const cost = siteHourCost[s.id] || 0;
+        const margin = rev > 0 ? ((rev - cost) / rev) * 100 : null;
+        return { id: s.id, name: s.name, category: s.category || '—', revenue: rev, cost, margin };
+      })
+      .sort((a, b) => b.revenue - a.revenue)
+      .slice(0, 10);
 
     return {
+      // --- NUOVI KPI EXECUTIVE ---
+      fatturatoMese,
+      fatturatoAnnoScorso,
+      costoPersonaleMese,
+      margineAssoluto,
+      marginePerc,
+      margineStatus,
+      efficienzaRatio,
+      oreContratteMese,
+      oreExtraTotali,
+      clientiAttivi,
+      totalActiveSites: activeSites.length,
+      topClientsByRevenue,
+      // --- METRICHE OPERATIVE (usate dagli altri grafici) ---
       totalAssignedHours: current.hours,
       activeContractsCount: current.contracts,
       estimatedMonthlyCost: current.cost,
@@ -378,145 +484,346 @@ const App: React.FC<{ user: User; isAdmin: boolean }> = ({ user, isAdmin }) => {
                 </div>
               </header>
 
-              {/* KPI CARDS */}
+              {/* ── KPI CARDS EXECUTIVE ── */}
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-                {/* Card 1: Dipendenti */}
-                <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4 hover:shadow-md transition-shadow">
-                  <div className="w-14 h-14 rounded-xl bg-blue-50 flex items-center justify-center text-[#004aad]">
-                    <Users className="w-7 h-7" />
-                  </div>
-                  <div>
-                    <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Dipendenti</p>
-                    <div className="flex items-baseline">
-                      <h3 className="text-2xl font-black text-gray-800">{employees.length}</h3>
-                      <TrendIndicator value={stats.variations.hours} />
+
+                {/* Card 1 – CardFatturatoMese */}
+                <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="w-11 h-11 rounded-xl bg-blue-50 flex items-center justify-center text-[#004aad]">
+                      <Euro className="w-5 h-5" />
                     </div>
-                    <p className="text-xs text-blue-600 font-bold mt-1">
-                      {stats.totalAssignedHours}h / sett. totali
-                    </p>
+                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider bg-gray-50 px-2 py-1 rounded-lg">
+                      {format(new Date(), 'MMM yyyy',)}
+                    </span>
+                  </div>
+                  <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Fatturato mese corrente</p>
+                  <p className="text-2xl font-black text-gray-800">
+                    {stats.fatturatoMese.toLocaleString('it-IT', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} <span className="text-lg">€</span>
+                  </p>
+                  <p className="text-xs text-gray-400 mt-2">
+                    Somma imponibili cantieri attivi
+                  </p>
+                  {stats.fatturatoMese === 0 && (
+                    <p className="text-[10px] text-amber-500 font-semibold mt-1">⚠ Nessun ricavo configurato nei cantieri</p>
+                  )}
+                </div>
+
+                {/* Card 2 – CardMarginePerc */}
+                <div className={`bg-white p-5 rounded-2xl shadow-sm hover:shadow-md transition-shadow border-l-4 ${stats.margineStatus === 'green' ? 'border-emerald-400 border border-gray-100' :
+                  stats.margineStatus === 'orange' ? 'border-amber-400 border border-gray-100' :
+                    'border-red-400 border border-gray-100'
+                  }`}>
+                  <div className="flex items-start justify-between mb-3">
+                    <div className={`w-11 h-11 rounded-xl flex items-center justify-center ${stats.margineStatus === 'green' ? 'bg-emerald-50 text-emerald-600' :
+                      stats.margineStatus === 'orange' ? 'bg-amber-50 text-amber-600' :
+                        'bg-red-50 text-red-600'
+                      }`}>
+                      <Percent className="w-5 h-5" />
+                    </div>
+                    <span className={`text-[10px] font-bold px-2 py-1 rounded-lg ${stats.margineStatus === 'green' ? 'bg-emerald-50 text-emerald-700' :
+                      stats.margineStatus === 'orange' ? 'bg-amber-50 text-amber-700' :
+                        'bg-red-50 text-red-700'
+                      }`}>
+                      {stats.margineStatus === 'green' ? 'Ottimo' : stats.margineStatus === 'orange' ? 'Attenzione' : 'Critico'}
+                    </span>
+                  </div>
+                  <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Margine lordo % mese</p>
+                  <p className="text-2xl font-black text-gray-800">
+                    {stats.fatturatoMese > 0 ? stats.marginePerc.toFixed(1) : '—'}<span className="text-lg">%</span>
+                  </p>
+                  <p className="text-xs text-gray-500 mt-2 font-medium">
+                    Margine lordo: <strong>{stats.margineAssoluto.toLocaleString('it-IT', { maximumFractionDigits: 0 })} €</strong>
+                  </p>
+                  <p className="text-[10px] text-gray-400 mt-0.5">Costo pers.: {stats.costoPersonaleMese.toLocaleString('it-IT', { maximumFractionDigits: 0 })} €</p>
+                </div>
+
+                {/* Card 3 – CardEfficienzaEconomica */}
+                <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="w-11 h-11 rounded-xl bg-violet-50 flex items-center justify-center text-violet-600">
+                      <Zap className="w-5 h-5" />
+                    </div>
+                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider bg-gray-50 px-2 py-1 rounded-lg">Efficienza</span>
+                  </div>
+                  <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Efficienza economica</p>
+                  <p className="text-2xl font-black text-gray-800">
+                    {stats.efficienzaRatio !== null
+                      ? `${stats.efficienzaRatio.toFixed(2)}×`
+                      : '—'}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-2">
+                    Ricavo / costo personale
+                  </p>
+                  <p className="text-[10px] text-gray-400 mt-0.5">
+                    Ore contratto: <strong>{Math.round(stats.oreContratteMese)}h</strong> · Extra: <strong>{Math.round(stats.oreExtraTotali)}h</strong>
+                  </p>
+                </div>
+
+                {/* Card 4 – CardCassaClienti */}
+                <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="w-11 h-11 rounded-xl bg-teal-50 flex items-center justify-center text-teal-600">
+                      <Landmark className="w-5 h-5" />
+                    </div>
+                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider bg-gray-50 px-2 py-1 rounded-lg">Cassa</span>
+                  </div>
+                  <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Cassa e clienti attivi</p>
+
+                  {/* Saldo cassa modificabile */}
+                  <div className="flex items-baseline gap-1.5 mb-0.5">
+                    {editingSaldo ? (
+                      <div className="flex items-center gap-1 w-full">
+                        <input
+                          ref={saldoRef}
+                          type="text"
+                          inputMode="decimal"
+                          defaultValue={saldoCassa.toFixed(2)}
+                          onChange={e => setSaldoInput(e.target.value)}
+                          onKeyDown={e => { if (e.key === 'Enter') saveSaldo(); if (e.key === 'Escape') setEditingSaldo(false); }}
+                          className="w-full text-xl font-black text-gray-800 bg-gray-50 border border-[#004aad] rounded-lg px-2 py-0.5 outline-none"
+                          autoFocus
+                        />
+                        <button onClick={saveSaldo} className="text-emerald-500 hover:text-emerald-700"><Check className="w-4 h-4" /></button>
+                      </div>
+                    ) : (
+                      <>
+                        <span className="text-xl font-black text-gray-800">
+                          {saldoCassa.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €
+                        </span>
+                        <button
+                          onClick={() => { setSaldoInput(saldoCassa.toFixed(2)); setEditingSaldo(true); }}
+                          className="text-gray-300 hover:text-[#004aad] transition-colors ml-1"
+                          title="Modifica saldo cassa"
+                        >
+                          <Edit2 className="w-3.5 h-3.5" />
+                        </button>
+                      </>
+                    )}
+                  </div>
+                  <p className="text-[10px] text-gray-400 mb-2">Saldo cassa/banca · clicca ✏ per aggiornare</p>
+
+                  <div className="border-t border-gray-100 pt-2 flex items-center justify-between">
+                    <div>
+                      <p className="text-xs font-bold text-gray-700">{stats.clientiAttivi} clienti attivi</p>
+                      <p className="text-[10px] text-gray-400">Cantieri con ricavo &gt; 0</p>
+                    </div>
+                    <div className="w-8 h-8 rounded-lg bg-teal-50 flex items-center justify-center text-teal-500 font-black text-sm">
+                      {stats.clientiAttivi}
+                    </div>
                   </div>
                 </div>
 
-                {/* Card 2: Cantieri */}
-                <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4 hover:shadow-md transition-shadow">
-                  <div className="w-14 h-14 rounded-xl bg-yellow-50 flex items-center justify-center text-yellow-600">
-                    <Building2 className="w-7 h-7" />
-                  </div>
-                  <div>
-                    <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Cantieri Totali</p>
-                    <h3 className="text-2xl font-black text-gray-800">{sites.length}</h3>
-                    <p className="text-xs text-gray-400 mt-1">Sedi operative registrate</p>
-                  </div>
-                </div>
-
-                {/* Card 3: Appalti Attivi */}
-                <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4 hover:shadow-md transition-shadow">
-                  <div className="w-14 h-14 rounded-xl bg-green-50 flex items-center justify-center text-green-600">
-                    <Activity className="w-7 h-7" />
-                  </div>
-                  <div>
-                    <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Appalti Attivi</p>
-                    <div className="flex items-baseline">
-                      <h3 className="text-2xl font-black text-gray-800">{stats.activeContractsCount}</h3>
-                      <TrendIndicator value={stats.variations.contracts} />
-                    </div>
-                    <p className="text-xs text-green-600 font-bold mt-1">Assegnazioni correnti</p>
-                  </div>
-                </div>
-
-                {/* Card 4: Stima Costi */}
-                <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4 hover:shadow-md transition-shadow">
-                  <div className="w-14 h-14 rounded-xl bg-purple-50 flex items-center justify-center text-purple-600">
-                    <TrendingUp className="w-7 h-7" />
-                  </div>
-                  <div>
-                    <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Stima Mensile</p>
-                    <div className="flex items-baseline">
-                      <h3 className="text-2xl font-black text-gray-800">~{Math.round(stats.estimatedMonthlyCost).toLocaleString('it-IT')} €</h3>
-                      <TrendIndicator value={stats.variations.cost} />
-                    </div>
-                    <p className="text-xs text-purple-400 mt-1 font-medium">Basato su contratti attivi</p>
-                  </div>
-                </div>
               </div>
 
               {/* CHARTS SECTION */}
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
                 {/* CHART: CITY DISTRIBUTION */}
-                <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 lg:col-span-1 flex flex-col h-[420px]">
+                <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 lg:col-span-1 flex flex-col">
                   <div className="flex items-center gap-3 mb-2 flex-shrink-0">
                     <div className="p-2 bg-gray-100 rounded-lg"><PieChartIcon className="w-5 h-5 text-gray-600" /></div>
                     <h3 className="font-bold text-gray-800 text-lg leading-tight">Distribuzione Appalti <br /><span className="text-xs font-normal text-gray-500">per Città (Sedi Lavorative)</span></h3>
                   </div>
 
-                  <div className="flex-1 w-full relative">
-                    {stats.pieData.length > 0 ? (
-                      <ResponsiveContainer width="100%" height="100%">
-                        <PieChart>
-                          <Pie
-                            data={stats.pieData}
-                            cx="50%"
-                            cy="45%"
-                            innerRadius={45}
-                            outerRadius={70}
-                            paddingAngle={5}
-                            dataKey="value"
-                          >
-                            {stats.pieData.map((_entry, index) => (
-                              <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} stroke="none" />
-                            ))}
-                          </Pie>
-                          <Tooltip
-                            contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', fontWeight: 'bold' }}
-                            itemStyle={{ color: '#374151' }}
-                          />
-                          <Legend
-                            layout="horizontal"
-                            verticalAlign="bottom"
-                            align="center"
-                            iconType="circle"
-                            iconSize={8}
-                            wrapperStyle={{ fontSize: '11px', fontWeight: '600', paddingTop: '8px' }}
-                          />
-                        </PieChart>
-                      </ResponsiveContainer>
-                    ) : (
-                      <div className="h-full flex flex-col items-center justify-center text-gray-400 italic text-sm">
-                        Nessun appalto attivo.
+                  {stats.pieData.length > 0 ? (
+                    <>
+                      {/* Donut con label % e totale al centro */}
+                      <div className="w-full flex-shrink-0 relative" style={{ height: 200 }}>
+                        {/* Totale cantieri nel foro del donut */}
+                        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none z-10">
+                          <span className="text-2xl font-black text-gray-800 leading-none">{stats.totalActiveSites}</span>
+                          <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider mt-0.5">cantieri</span>
+                        </div>
+                        <ResponsiveContainer width="100%" height="100%">
+                          <PieChart>
+                            <Pie
+                              data={stats.pieData}
+                              cx="50%"
+                              cy="50%"
+                              innerRadius={52}
+                              outerRadius={78}
+                              paddingAngle={3}
+                              dataKey="value"
+                              labelLine={false}
+                              label={({ cx, cy, midAngle, innerRadius, outerRadius, pct }: any) => {
+                                if (pct < 6) return null;
+                                const RADIAN = Math.PI / 180;
+                                const r = innerRadius + (outerRadius - innerRadius) * 0.55;
+                                const x = cx + r * Math.cos(-midAngle * RADIAN);
+                                const y = cy + r * Math.sin(-midAngle * RADIAN);
+                                return (
+                                  <text x={x} y={y} fill="white" textAnchor="middle" dominantBaseline="central" fontSize={10} fontWeight="bold">
+                                    {pct}%
+                                  </text>
+                                );
+                              }}
+                            >
+                              {stats.pieData.map((_entry, index) => (
+                                <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} stroke="none" />
+                              ))}
+                            </Pie>
+                            <Tooltip
+                              contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', fontWeight: 'bold', fontSize: '12px' }}
+                              itemStyle={{ color: '#374151' }}
+                              formatter={(value: any, _name: any, props: any) => [`${props.payload.pct}%`, props.payload.name]}
+                            />
+                          </PieChart>
+                        </ResponsiveContainer>
                       </div>
-                    )}
-                  </div>
+
+                      {/* Lista città — stesso ordine di pieData per allineare i colori al donut */}
+                      <div className="mt-3 flex-1 space-y-1.5 overflow-y-auto">
+                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Cantieri per città</p>
+                        {(() => {
+                          const cityCount = new Map(stats.sortedCities);
+                          return stats.pieData.map((entry, i) => (
+                            <div key={entry.name} className="flex items-center justify-between text-xs py-1 px-2 rounded-lg hover:bg-gray-50 transition-colors">
+                              <div className="flex items-center gap-2 min-w-0">
+                                <div
+                                  className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                                  style={{ backgroundColor: CHART_COLORS[i % CHART_COLORS.length] }}
+                                />
+                                <span className="text-gray-700 font-medium truncate">{entry.name}</span>
+                              </div>
+                              <span className="font-black text-gray-800 ml-2 flex-shrink-0 tabular-nums">
+                                {cityCount.get(entry.name) ?? 0}
+                              </span>
+                            </div>
+                          ));
+                        })()}
+                      </div>
+                    </>
+                  ) : (
+                    <div className="flex-1 flex flex-col items-center justify-center text-gray-400 italic text-sm">
+                      Nessun appalto attivo.
+                    </div>
+                  )}
                 </div>
 
-                {/* CHART: TOP SITES BY EFFORT */}
+                {/* PANNELLO TABBATO: Clienti e cantieri principali */}
                 <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 lg:col-span-2 flex flex-col">
-                  <div className="flex items-center gap-3 mb-6">
-                    <div className="p-2 bg-gray-100 rounded-lg"><BarChart3 className="w-5 h-5 text-gray-600" /></div>
-                    <h3 className="font-bold text-gray-800 text-lg">Top 5 Cantieri per Impegno Orario</h3>
+                  {/* Header + Tabs */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-gray-100 rounded-lg"><BarChart3 className="w-5 h-5 text-gray-600" /></div>
+                      <h3 className="font-bold text-gray-800 text-lg">Clienti e cantieri principali</h3>
+                    </div>
+                    <div className="flex bg-gray-100 rounded-xl p-1 gap-1 self-start sm:self-auto">
+                      <button
+                        onClick={() => setActiveTab('revenue')}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${activeTab === 'revenue'
+                          ? 'bg-white text-[#004aad] shadow-sm'
+                          : 'text-gray-500 hover:text-gray-700'
+                          }`}
+                      >
+                        Top clienti per fatturato
+                      </button>
+                      <button
+                        onClick={() => setActiveTab('hours')}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${activeTab === 'hours'
+                          ? 'bg-white text-[#004aad] shadow-sm'
+                          : 'text-gray-500 hover:text-gray-700'
+                          }`}
+                      >
+                        Top cantieri per ore
+                      </button>
+                    </div>
                   </div>
 
-                  <div className="flex-1">
-                    {stats.sortedSitesLoad.length > 0 ? (
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        {stats.sortedSitesLoad.map((site, idx) => (
-                          <div key={idx} className="flex items-center gap-4 p-4 rounded-xl border border-gray-100 bg-gray-50/50 hover:border-blue-200 hover:bg-white transition-all">
-                            <div className="w-10 h-10 rounded-full bg-white border-2 border-[#004aad] text-[#004aad] font-black flex items-center justify-center text-sm shadow-sm flex-shrink-0">
-                              {idx + 1}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <h4 className="font-bold text-gray-800 truncate">{site.name}</h4>
-                              <p className="text-xs text-gray-500">Richiede <strong className="text-gray-900">{site.hours}h</strong> / settimana</p>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="h-32 flex flex-col items-center justify-center text-gray-400 italic text-sm border-2 border-dashed border-gray-100 rounded-xl">
-                        Nessuna assegnazione oraria attiva.
-                      </div>
-                    )}
-                  </div>
+                  {/* TAB 1 – Top clienti per fatturato */}
+                  {activeTab === 'revenue' && (
+                    <div className="flex-1 overflow-y-auto">
+                      {stats.topClientsByRevenue.length > 0 ? (
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-b border-gray-100">
+                              <th className="text-left text-[10px] font-bold text-gray-400 uppercase tracking-wider pb-2 w-7">#</th>
+                              <th className="text-left text-[10px] font-bold text-gray-400 uppercase tracking-wider pb-2">Cliente</th>
+                              <th className="text-left text-[10px] font-bold text-gray-400 uppercase tracking-wider pb-2 hidden sm:table-cell">Tipologia</th>
+                              <th className="text-right text-[10px] font-bold text-gray-400 uppercase tracking-wider pb-2">Fatturato / mese</th>
+                              <th className="text-right text-[10px] font-bold text-gray-400 uppercase tracking-wider pb-2 hidden md:table-cell">Margine %</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-gray-50">
+                            {stats.topClientsByRevenue.map((client, idx) => (
+                              <tr key={client.id} className="hover:bg-gray-50/60 transition-colors">
+                                <td className="py-2.5 pr-2">
+                                  <span className="w-6 h-6 rounded-full bg-[#004aad]/10 text-[#004aad] font-black text-[10px] flex items-center justify-center">
+                                    {idx + 1}
+                                  </span>
+                                </td>
+                                <td className="py-2.5 pr-3">
+                                  <span className="font-semibold text-gray-800 truncate block max-w-[120px] md:max-w-none">{client.name}</span>
+                                </td>
+                                <td className="py-2.5 pr-3 hidden sm:table-cell">
+                                  <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">{client.category}</span>
+                                </td>
+                                <td className="py-2.5 text-right">
+                                  <span className="font-black text-gray-800 tabular-nums">
+                                    {client.revenue.toLocaleString('it-IT', { maximumFractionDigits: 0 })} €
+                                  </span>
+                                </td>
+                                <td className="py-2.5 text-right hidden md:table-cell">
+                                  {client.margin !== null ? (
+                                    <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${client.margin >= 30 ? 'bg-emerald-50 text-emerald-700' :
+                                      client.margin >= 15 ? 'bg-amber-50 text-amber-700' :
+                                        'bg-red-50 text-red-700'
+                                      }`}>
+                                      {client.margin.toFixed(1)}%
+                                    </span>
+                                  ) : <span className="text-gray-300">—</span>}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      ) : (
+                        <div className="h-32 flex items-center justify-center text-gray-400 italic text-sm border-2 border-dashed border-gray-100 rounded-xl">
+                          Nessun cantiere con fatturato configurato.
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* TAB 2 – Top cantieri per ore */}
+                  {activeTab === 'hours' && (
+                    <div className="flex-1">
+                      {stats.sortedSitesLoad.length > 0 ? (
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-b border-gray-100">
+                              <th className="text-left text-[10px] font-bold text-gray-400 uppercase tracking-wider pb-2 w-7">#</th>
+                              <th className="text-left text-[10px] font-bold text-gray-400 uppercase tracking-wider pb-2">Cantiere</th>
+                              <th className="text-right text-[10px] font-bold text-gray-400 uppercase tracking-wider pb-2">Ore / settimana</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-gray-50">
+                            {stats.sortedSitesLoad.map((site, idx) => (
+                              <tr key={idx} className="hover:bg-gray-50/60 transition-colors">
+                                <td className="py-3 pr-2">
+                                  <span className="w-7 h-7 rounded-full bg-white border-2 border-[#004aad] text-[#004aad] font-black text-xs flex items-center justify-center shadow-sm">
+                                    {idx + 1}
+                                  </span>
+                                </td>
+                                <td className="py-3 pr-3">
+                                  <span className="font-semibold text-gray-800">{site.name}</span>
+                                </td>
+                                <td className="py-3 text-right">
+                                  <span className="font-black text-gray-800 tabular-nums">{site.hours}h</span>
+                                  <span className="text-xs text-gray-400 ml-1">/ sett.</span>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      ) : (
+                        <div className="h-32 flex items-center justify-center text-gray-400 italic text-sm border-2 border-dashed border-gray-100 rounded-xl">
+                          Nessuna assegnazione oraria attiva.
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
 
