@@ -627,18 +627,33 @@ export const MonthlyAllowanceSheet: React.FC<Props> = ({ employees }) => {
                         return;
                     }
 
-                    // Detect pre-processed split cells (PERMESSO / STRAORDINARIO)
-                    if (data.column.index > 0 && data.cell.raw instanceof HTMLElement) {
-                        const td = data.cell.raw as HTMLElement;
-                        const outerDiv = td.querySelector('div[style*="text-align:center"]');
-                        if (outerDiv && outerDiv.children.length >= 2) {
-                            const line1 = (outerDiv.children[0] as HTMLElement).textContent?.trim() || '';
-                            const line2 = (outerDiv.children[1] as HTMLElement).textContent?.trim() || '';
-                            if (line1 && line2) {
-                                data.cell.text = [line1, line2];
-                                data.cell.styles.minCellHeight = 10;
-                                return;
+                    if (data.column.index > 0) {
+                        // Detect pre-processed split cells (PERMESSO / STRAORDINARIO)
+                        if (data.cell.raw instanceof HTMLElement) {
+                            const td = data.cell.raw as HTMLElement;
+                            const outerDiv = td.querySelector('div[style*="text-align:center"]');
+                            if (outerDiv && outerDiv.children.length >= 2) {
+                                const line1 = (outerDiv.children[0] as HTMLElement).textContent?.trim() || '';
+                                const line2 = (outerDiv.children[1] as HTMLElement).textContent?.trim() || '';
+                                if (line1 && line2) {
+                                    data.cell.text = [line1, line2];
+                                    data.cell.styles.minCellHeight = 10;
+                                    return;
+                                }
                             }
+                        }
+
+                        // Color attendance type cells using cell.styles (jsPDF uses these, not doc.setFillColor)
+                        const txt = data.cell.text.join('').trim();
+                        if (txt === 'F') {
+                            (data.cell.styles as unknown as Record<string, unknown>).fillColor = [220, 252, 231];
+                            (data.cell.styles as unknown as Record<string, unknown>).textColor = [21, 128, 61];
+                        } else if (txt === 'M') {
+                            (data.cell.styles as unknown as Record<string, unknown>).fillColor = [254, 226, 226];
+                            (data.cell.styles as unknown as Record<string, unknown>).textColor = [185, 28, 28];
+                        } else if (txt === 'A') {
+                            (data.cell.styles as unknown as Record<string, unknown>).fillColor = [229, 231, 235];
+                            (data.cell.styles as unknown as Record<string, unknown>).textColor = [107, 114, 128];
                         }
                     }
                 }
