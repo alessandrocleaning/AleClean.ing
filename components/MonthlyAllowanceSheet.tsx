@@ -503,6 +503,34 @@ export const MonthlyAllowanceSheet: React.FC<Props> = ({ employees }) => {
 
         const clone = table.cloneNode(true) as HTMLTableElement;
 
+        // --- PRE-PROCESS: convert split-layout cells (PERMESSO / STRAORDINARIO) ---
+        // PERMESSO/STRAORDINARIO cells have a div.flex-col with exactly 2 child divs.
+        const allTds = clone.querySelectorAll('tbody td');
+        allTds.forEach(td => {
+            const flexCol = td.querySelector('div');
+            if (!flexCol) return;
+            const children = Array.from(flexCol.children);
+            if (children.length !== 2) return;
+
+            const topDiv = children[0] as HTMLElement;
+            const bottomDiv = children[1] as HTMLElement;
+
+            const badgeSpan = bottomDiv.querySelector('span');
+            const badgeLetter = badgeSpan?.textContent?.trim() || '';
+            if (badgeLetter !== 'P' && badgeLetter !== 'S') return;
+
+            const topValue = (topDiv.textContent || '').trim();
+            const bottomInput = bottomDiv.querySelector('input') as HTMLInputElement | null;
+            const bottomValue = bottomInput?.value?.trim() || '';
+
+            const color = badgeLetter === 'P' ? '#6b21a8' : '#9a3412';
+            const bgColor = badgeLetter === 'P' ? '#f3e8ff' : '#ffedd5';
+            td.innerHTML = `<div style="text-align:center;padding:2px 0">` +
+                `<div style="font-weight:bold;font-size:10px;color:#1f2937">${topValue || '—'}</div>` +
+                `<div style="font-weight:bold;font-size:9px;color:${color};background:${bgColor};padding:1px 4px;border-radius:3px;display:inline-block;margin-top:1px">${bottomValue || '0'} ${badgeLetter}</div>` +
+                `</div>`;
+        });
+
         // Clean up inputs (replace with text)
         const inputs = clone.querySelectorAll('input');
         inputs.forEach(input => {
