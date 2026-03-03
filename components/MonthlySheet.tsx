@@ -1314,7 +1314,7 @@ export const MonthlySheet: React.FC<Props> = ({ employees, sites, setEmployees }
                 );
             },
             didParseCell: function (data) {
-                // Fix header layout for Day columns: letter on top, number on bottom
+                // Fix header layout for Day columns: number on top, letter on bottom
                 if (data.section === 'head' && data.cell.text && data.cell.text.length > 0) {
                     const rawText = data.cell.text.join(' ').trim();
                     const match = rawText.match(/^([a-zA-Z])\s*(\d{1,2})$/);
@@ -1323,16 +1323,32 @@ export const MonthlySheet: React.FC<Props> = ({ employees, sites, setEmployees }
                     }
                 }
 
-                // Keep name and surname on one line (they may come as separate text nodes)
-                if (data.section === 'body' && data.column.index === 0 && data.cell.text) {
-                    if (Array.isArray(data.cell.text) && data.cell.text.length > 1) {
+                if (data.section === 'body') {
+                    // Keep name and surname on one line
+                    if (data.column.index === 0 && Array.isArray(data.cell.text) && data.cell.text.length > 1) {
                         const joined = data.cell.text.map(t => t.trim()).filter(t => t.length > 0).join(' ');
                         data.cell.text = [joined];
+                        return;
+                    }
+
+                    // Detect pre-processed split cells (PERMESSO / STRAORDINARIO)
+                    // Pre-processing creates: <div style="text-align:center"><div>work</div><div>permit P</div></div>
+                    if (data.column.index > 0 && data.cell.raw instanceof HTMLElement) {
+                        const td = data.cell.raw as HTMLElement;
+                        const outerDiv = td.querySelector('div[style*="text-align:center"]');
+                        if (outerDiv && outerDiv.children.length >= 2) {
+                            const line1 = (outerDiv.children[0] as HTMLElement).textContent?.trim() || '';
+                            const line2 = (outerDiv.children[1] as HTMLElement).textContent?.trim() || '';
+                            if (line1 && line2) {
+                                // Force two-line rendering
+                                data.cell.text = [line1, line2];
+                                // Increase cell height to fit two lines
+                                data.cell.styles.minCellHeight = 10;
+                                return;
+                            }
+                        }
                     }
                 }
-                // NOTE: split cells (PERMESSO/STRAORDINARIO) are pre-processed before autoTable is called.
-                // Their HTML already contains two <div> lines, so jsPDF will produce ['4', '4 P'].
-                // We intentionally do NOT join these, so they render as two lines in the PDF.
             },
             willDrawCell: function (data) {
                 // If the cell contains 'P', we change the text color to purple for that cell or 

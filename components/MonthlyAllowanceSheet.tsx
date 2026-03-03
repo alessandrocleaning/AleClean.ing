@@ -614,15 +614,29 @@ export const MonthlyAllowanceSheet: React.FC<Props> = ({ employees }) => {
                     }
                 }
 
-                // Keep name and surname on one line
-                if (data.section === 'body' && data.column.index === 0 && data.cell.text) {
-                    if (Array.isArray(data.cell.text) && data.cell.text.length > 1) {
+                if (data.section === 'body') {
+                    // Keep name and surname on one line
+                    if (data.column.index === 0 && Array.isArray(data.cell.text) && data.cell.text.length > 1) {
                         const joined = data.cell.text.map(t => t.trim()).filter(t => t.length > 0).join(' ');
                         data.cell.text = [joined];
+                        return;
+                    }
+
+                    // Detect pre-processed split cells (PERMESSO / STRAORDINARIO)
+                    if (data.column.index > 0 && data.cell.raw instanceof HTMLElement) {
+                        const td = data.cell.raw as HTMLElement;
+                        const outerDiv = td.querySelector('div[style*="text-align:center"]');
+                        if (outerDiv && outerDiv.children.length >= 2) {
+                            const line1 = (outerDiv.children[0] as HTMLElement).textContent?.trim() || '';
+                            const line2 = (outerDiv.children[1] as HTMLElement).textContent?.trim() || '';
+                            if (line1 && line2) {
+                                data.cell.text = [line1, line2];
+                                data.cell.styles.minCellHeight = 10;
+                                return;
+                            }
+                        }
                     }
                 }
-                // NOTE: split cells (PERMESSO/STRAORDINARIO) are pre-processed before autoTable.
-                // jsPDF receives ['4', '4 P'] and renders them on two lines. Do NOT join them.
             }
         });
 
