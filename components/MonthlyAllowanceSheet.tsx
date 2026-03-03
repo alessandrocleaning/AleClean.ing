@@ -642,6 +642,58 @@ export const MonthlyAllowanceSheet: React.FC<Props> = ({ employees }) => {
                         }
                     }
                 }
+            },
+            willDrawCell: function (data) {
+                if (data.section === 'body' && data.column.index > 0 &&
+                    Array.isArray(data.cell.text) && data.cell.text.length >= 2) {
+                    const l2 = data.cell.text[1] || '';
+                    if (l2.includes('P') || l2.includes('S')) {
+                        doc.setFillColor(255, 255, 255);
+                        doc.setTextColor(31, 41, 55);
+                    }
+                }
+            },
+            didDrawCell: function (data) {
+                if (data.section === 'body' && data.column.index > 0 &&
+                    Array.isArray(data.cell.text) && data.cell.text.length >= 2) {
+
+                    const line1 = data.cell.text[0] || '';
+                    const line2 = data.cell.text[1] || '';
+                    const hasPermit = line2.includes('P');
+                    const hasOvertime = line2.includes('S');
+                    if (!hasPermit && !hasOvertime) return;
+
+                    const x = data.cell.x;
+                    const y = data.cell.y;
+                    const w = data.cell.width;
+                    const h = data.cell.height;
+                    const midY = y + h / 2;
+
+                    // Top half: white background
+                    doc.setFillColor(255, 255, 255);
+                    doc.rect(x, y, w, h / 2, 'F');
+
+                    // Bottom half: colored background
+                    if (hasPermit) doc.setFillColor(237, 233, 254);
+                    else doc.setFillColor(255, 237, 213);
+                    doc.rect(x, midY, w, h / 2 + 0.5, 'F');
+
+                    // Divider line
+                    doc.setDrawColor(200, 200, 200);
+                    doc.setLineWidth(0.25);
+                    doc.line(x, midY, x + w, midY);
+
+                    // Top text (work hours) — dark
+                    doc.setTextColor(31, 41, 55);
+                    doc.setFontSize(7);
+                    doc.setFont('helvetica', 'bold');
+                    doc.text(line1, x + w / 2, y + h / 4, { align: 'center', baseline: 'middle' });
+
+                    // Bottom text (permit/overtime) — colored
+                    if (hasPermit) doc.setTextColor(107, 33, 168);
+                    else doc.setTextColor(154, 52, 18);
+                    doc.text(line2, x + w / 2, midY + h / 4, { align: 'center', baseline: 'middle' });
+                }
             }
         });
 

@@ -1356,21 +1356,58 @@ export const MonthlySheet: React.FC<Props> = ({ employees, sites, setEmployees }
                 }
             },
             willDrawCell: function (data) {
-                // If the cell contains 'P', we change the text color to purple for that cell or 
-                // apply a very light purple background to mimic the UI.
-                if (data.section === 'body' && data.column.index !== 0) {
-                    if (Array.isArray(data.cell.text)) {
-                        const hasPermit = data.cell.text.some(t => t.includes('P'));
-                        if (hasPermit) {
-                            // Light purple background
-                            doc.setFillColor(243, 232, 255); // f3e8ff (bg-purple-100)
-                            // Purple text
-                            doc.setTextColor(126, 34, 206); // 7e22ce (text-purple-700)
-                        } else if (data.cell.text.some(t => t.match(/^\d+(\.\d+)?$/))) {
-                            // Standard work hours: keep default table text color (dark gray usually)
-                            doc.setTextColor(50, 50, 50);
-                        }
+                // For split cells (two text lines = work + permit/overtime),
+                // reset to white background so didDrawCell can paint the two halves correctly.
+                if (data.section === 'body' && data.column.index > 0 &&
+                    Array.isArray(data.cell.text) && data.cell.text.length >= 2) {
+                    const l2 = data.cell.text[1] || '';
+                    if (l2.includes('P') || l2.includes('S')) {
+                        doc.setFillColor(255, 255, 255); // white - override alternating row
+                        doc.setTextColor(31, 41, 55);    // dark text for first jsPDF draw
                     }
+                }
+            },
+            didDrawCell: function (data) {
+                // After jsPDF draws the cell, overdraw with our split layout
+                if (data.section === 'body' && data.column.index > 0 &&
+                    Array.isArray(data.cell.text) && data.cell.text.length >= 2) {
+
+                    const line1 = data.cell.text[0] || '';
+                    const line2 = data.cell.text[1] || '';
+                    const hasPermit = line2.includes('P');
+                    const hasOvertime = line2.includes('S');
+                    if (!hasPermit && !hasOvertime) return;
+
+                    const x = data.cell.x;
+                    const y = data.cell.y;
+                    const w = data.cell.width;
+                    const h = data.cell.height;
+                    const midY = y + h / 2;
+
+                    // 1. White background for top half (work hours)
+                    doc.setFillColor(255, 255, 255);
+                    doc.rect(x, y, w, h / 2, 'F');
+
+                    // 2. Colored background for bottom half (permit=purple, overtime=orange)
+                    if (hasPermit) doc.setFillColor(237, 233, 254); // ede9fe violet-100
+                    else doc.setFillColor(255, 237, 213);           // ffedd5 orange-100
+                    doc.rect(x, midY, w, h / 2 + 0.5, 'F');
+
+                    // 3. Draw horizontal divider line
+                    doc.setDrawColor(200, 200, 200);
+                    doc.setLineWidth(0.25);
+                    doc.line(x, midY, x + w, midY);
+
+                    // 4. Draw top text (work hours) — dark centered in top half
+                    doc.setTextColor(31, 41, 55);
+                    doc.setFontSize(7);
+                    doc.setFont('helvetica', 'bold');
+                    doc.text(line1, x + w / 2, y + h / 4, { align: 'center', baseline: 'middle' });
+
+                    // 5. Draw bottom text (permit/overtime) — colored, centered in bottom half
+                    if (hasPermit) doc.setTextColor(107, 33, 168); // purple-700
+                    else doc.setTextColor(154, 52, 18);            // orange-800
+                    doc.text(line2, x + w / 2, midY + h / 4, { align: 'center', baseline: 'middle' });
                 }
             }
         });
