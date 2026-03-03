@@ -1120,15 +1120,45 @@ export const MonthlySheet: React.FC<Props> = ({ employees, sites, setEmployees }
         rows.forEach(row => {
             const cols = row.querySelectorAll('th, td');
             const rowData: string[] = [];
+            let dataColIndex = 0;
 
             cols.forEach(col => {
-                let text = (col as HTMLElement).innerText || col.textContent || "";
+                const cellEl = col as HTMLElement;
+                let text = "";
+
+                // Special handling for split cells (Work / Permit)
+                const splitContainer = cellEl.querySelector('.flex-col.items-center.justify-center');
+                if (splitContainer && cellEl.querySelectorAll('span').length > 0) {
+                    const spans = Array.from(cellEl.querySelectorAll('span')).map(s => s.textContent?.trim() || '');
+
+                    const lines: string[] = [];
+                    for (let i = 0; i < spans.length; i++) {
+                        if (spans[i] === 'P' && lines.length > 0) {
+                            lines[lines.length - 1] += ' P';
+                        } else if (spans[i]) {
+                            lines.push(spans[i]);
+                        }
+                    }
+                    text = lines.join(' / ');
+                } else if (cellEl.querySelector('.flex-col') && dataColIndex === 0) {
+                    // It's the Name cell
+                    const nameSpans = Array.from(cellEl.querySelectorAll('.flex-col span'));
+                    if (nameSpans.length >= 2) {
+                        text = `${nameSpans[0].textContent?.trim()} ${nameSpans[1].textContent?.trim()}`;
+                    } else {
+                        text = cellEl.innerText || cellEl.textContent || "";
+                    }
+                } else {
+                    text = cellEl.innerText || cellEl.textContent || "";
+                }
+
                 // Replace newlines and excessive spaces
                 text = text.replace(/(\r\n|\n|\r)/gm, " ").replace(/\s+/g, ' ').trim();
 
                 // Escape quotes and wrap in quotes for CSV safety
                 const escaped = text.replace(/"/g, '""');
                 rowData.push(`"${escaped}"`);
+                dataColIndex++;
             });
 
             csvContent += rowData.join(";") + "\r\n";
@@ -1261,19 +1291,84 @@ export const MonthlySheet: React.FC<Props> = ({ employees, sites, setEmployees }
                     }
                 }
 
-                // Keep name and surname cleanly spaced
-                if (data.section === 'body' && data.column.index === 0 && data.cell.text) {
+                // Custom parsing for cells containing split values (Work/Permit)
+                if (data.section === 'body' && data.cell.raw instanceof HTMLElement) {
+                    const cellEl = data.cell.raw as HTMLElement;
+
+                    // Keep name and surname cleanly spaced
+                    if (data.column.index === 0) {
+                        const nameContainer = cellEl.querySelector('.flex-col');
+                        if (nameContainer) {
+                            const spans = Array.from(nameContainer.querySelectorAll('span')).map(s => s.textContent || '');
+                            if (spans.length >= 2) {
+                                data.cell.text = [`${spans[0]} ${spans[1]}`.trim()];
+                            }
+                        }
+                        return; // Done with name cell
+                    }
+
+                    // Handle split hours cells (e.g., 4 work, 4 permit)
+                    const splitContainer = cellEl.querySelector('.flex-col.items-center.justify-center');
+                    if (splitContainer && cellEl.querySelectorAll('span').length > 0) {
+                        // It's a day cell with potentially multiple stacked values
+                        const lines: string[] = [];
+                        const spans = cellEl.querySelectorAll('span');
+                        spans.forEach(span => {
+                            const text = span.textContent?.trim();
+                            if (text) {
+                                // Se è il permesso, ha la "P" vicina o inclusa. 
+                                // Il DOM renderizza <span ...>4</span><span text-[6px]>P</span>
+                                // Se contiene 'P' lo spazio, lo uniamo al numero precedente se serve, 
+                                // ma più semplicemente autoTable ci dà span separati.
+                                // Più sicuro analizzare i nodi testuali:
+                                lines.push(text);
+                            }
+                        });
+
+                        // Il rendering React produce due div principali se c'è split, o span misti.
+                        // Ripuliamo l'output per renderlo "4" su una riga e "4 P" sull'altra.
+                        // Poiché 'text' conterrà ['4', '4', 'P'] se ci sono due div, raggruppiamo la P
+                        const cleanedLines: string[] = [];
+                        for (let i = 0; i < lines.length; i++) {
+                            if (lines[i] === 'P' && cleanedLines.length > 0) {
+                                cleanedLines[cleanedLines.length - 1] += ' P';
+                            } else {
+                                cleanedLines.push(lines[i]);
+                            }
+                        }
+
+                        if (cleanedLines.length > 1) {
+                            data.cell.text = cleanedLines; // Array of strings creates multi-line cell in jsPDF
+                        } else if (cleanedLines.length === 1) {
+                            data.cell.text = [cleanedLines[0]];
+                        }
+                        return;
+                    }
+                }
+
+                // Generic cleanup for other cells to avoid vertical stacking strings without spaces
+                if (data.section === 'body' && data.column.index !== 0 && data.cell.text) {
                     if (Array.isArray(data.cell.text)) {
-                        // Natively, jsPDF might split the span elements into separate array items. Join them with a space.
                         const joined = data.cell.text.map(t => t.trim()).filter(t => t.length > 0).join(' ');
                         data.cell.text = [joined];
                     }
                 }
-
-                // Generic cleanup for other cells to avoid vertical stacking
-                if (data.section === 'body' && data.column.index !== 0 && data.cell.text) {
+            },
+            willDrawCell: function (data) {
+                // If the cell contains 'P', we change the text color to purple for that cell or 
+                // apply a very light purple background to mimic the UI.
+                if (data.section === 'body' && data.column.index !== 0) {
                     if (Array.isArray(data.cell.text)) {
-                        data.cell.text = [data.cell.text.map(t => t.trim()).filter(t => t.length > 0).join(' ')];
+                        const hasPermit = data.cell.text.some(t => t.includes('P'));
+                        if (hasPermit) {
+                            // Light purple background
+                            doc.setFillColor(243, 232, 255); // f3e8ff (bg-purple-100)
+                            // Purple text
+                            doc.setTextColor(126, 34, 206); // 7e22ce (text-purple-700)
+                        } else if (data.cell.text.some(t => t.match(/^\d+(\.\d+)?$/))) {
+                            // Standard work hours: keep default table text color (dark gray usually)
+                            doc.setTextColor(50, 50, 50);
+                        }
                     }
                 }
             }
