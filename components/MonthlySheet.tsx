@@ -1356,19 +1356,40 @@ export const MonthlySheet: React.FC<Props> = ({ employees, sites, setEmployees }
                 }
             },
             willDrawCell: function (data) {
-                // For split cells (two text lines = work + permit/overtime),
-                // reset to white background so didDrawCell can paint the two halves correctly.
-                if (data.section === 'body' && data.column.index > 0 &&
-                    Array.isArray(data.cell.text) && data.cell.text.length >= 2) {
-                    const l2 = data.cell.text[1] || '';
-                    if (l2.includes('P') || l2.includes('S')) {
-                        doc.setFillColor(255, 255, 255); // white - override alternating row
-                        doc.setTextColor(31, 41, 55);    // dark text for first jsPDF draw
+                if (data.section === 'body' && data.column.index > 0) {
+                    const text = (Array.isArray(data.cell.text) ? data.cell.text.join('') : '').trim();
+
+                    // Split cells (PERMESSO/STRAORDINARIO): white bg so didDrawCell can overdraw halves
+                    if (data.cell.text.length >= 2) {
+                        const l2 = data.cell.text[1] || '';
+                        if (l2.includes('P') || l2.includes('S')) {
+                            doc.setFillColor(255, 255, 255);
+                            doc.setTextColor(31, 41, 55);
+                            return;
+                        }
+                    }
+
+                    // FERIE → green
+                    if (text === 'F') {
+                        doc.setFillColor(220, 252, 231); // green-100
+                        doc.setTextColor(21, 128, 61);   // green-700
+                        return;
+                    }
+                    // MALATTIA → red
+                    if (text === 'M') {
+                        doc.setFillColor(254, 226, 226); // red-100
+                        doc.setTextColor(185, 28, 28);   // red-700
+                        return;
+                    }
+                    // ASSENZA → gray
+                    if (text === 'A') {
+                        doc.setFillColor(229, 231, 235); // gray-200
+                        doc.setTextColor(107, 114, 128); // gray-500
+                        return;
                     }
                 }
             },
             didDrawCell: function (data) {
-                // After jsPDF draws the cell, overdraw with our split layout
                 if (data.section === 'body' && data.column.index > 0 &&
                     Array.isArray(data.cell.text) && data.cell.text.length >= 2) {
 
@@ -1384,27 +1405,32 @@ export const MonthlySheet: React.FC<Props> = ({ employees, sites, setEmployees }
                     const h = data.cell.height;
                     const midY = y + h / 2;
 
-                    // 1. White background for top half (work hours)
-                    doc.setFillColor(255, 255, 255);
+                    // 1. Top half: match the row's actual background (alternating or white)
+                    const rowFill = data.cell.styles.fillColor as number[] | undefined;
+                    if (Array.isArray(rowFill) && rowFill.length >= 3) {
+                        doc.setFillColor(rowFill[0], rowFill[1], rowFill[2]);
+                    } else {
+                        doc.setFillColor(255, 255, 255);
+                    }
                     doc.rect(x, y, w, h / 2, 'F');
 
-                    // 2. Colored background for bottom half (permit=purple, overtime=orange)
-                    if (hasPermit) doc.setFillColor(237, 233, 254); // ede9fe violet-100
-                    else doc.setFillColor(255, 237, 213);           // ffedd5 orange-100
+                    // 2. Bottom half: colored background (permit=violet, overtime=orange)
+                    if (hasPermit) doc.setFillColor(237, 233, 254); // violet-100
+                    else doc.setFillColor(255, 237, 213);           // orange-100
                     doc.rect(x, midY, w, h / 2 + 0.5, 'F');
 
-                    // 3. Draw horizontal divider line
+                    // 3. Horizontal divider line
                     doc.setDrawColor(200, 200, 200);
                     doc.setLineWidth(0.25);
                     doc.line(x, midY, x + w, midY);
 
-                    // 4. Draw top text (work hours) — dark centered in top half
+                    // 4. Top text (work hours) — dark, centered in top half
                     doc.setTextColor(31, 41, 55);
                     doc.setFontSize(7);
                     doc.setFont('helvetica', 'bold');
                     doc.text(line1, x + w / 2, y + h / 4, { align: 'center', baseline: 'middle' });
 
-                    // 5. Draw bottom text (permit/overtime) — colored, centered in bottom half
+                    // 5. Bottom text (permit/overtime) — colored, centered in bottom half
                     if (hasPermit) doc.setTextColor(107, 33, 168); // purple-700
                     else doc.setTextColor(154, 52, 18);            // orange-800
                     doc.text(line2, x + w / 2, midY + h / 4, { align: 'center', baseline: 'middle' });

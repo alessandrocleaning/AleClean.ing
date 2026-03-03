@@ -644,13 +644,25 @@ export const MonthlyAllowanceSheet: React.FC<Props> = ({ employees }) => {
                 }
             },
             willDrawCell: function (data) {
-                if (data.section === 'body' && data.column.index > 0 &&
-                    Array.isArray(data.cell.text) && data.cell.text.length >= 2) {
-                    const l2 = data.cell.text[1] || '';
-                    if (l2.includes('P') || l2.includes('S')) {
-                        doc.setFillColor(255, 255, 255);
-                        doc.setTextColor(31, 41, 55);
+                if (data.section === 'body' && data.column.index > 0) {
+                    const text = (Array.isArray(data.cell.text) ? data.cell.text.join('') : '').trim();
+
+                    // Split cells: white bg so didDrawCell can overdraw halves
+                    if (data.cell.text.length >= 2) {
+                        const l2 = data.cell.text[1] || '';
+                        if (l2.includes('P') || l2.includes('S')) {
+                            doc.setFillColor(255, 255, 255);
+                            doc.setTextColor(31, 41, 55);
+                            return;
+                        }
                     }
+
+                    // FERIE → green
+                    if (text === 'F') { doc.setFillColor(220, 252, 231); doc.setTextColor(21, 128, 61); return; }
+                    // MALATTIA → red
+                    if (text === 'M') { doc.setFillColor(254, 226, 226); doc.setTextColor(185, 28, 28); return; }
+                    // ASSENZA → gray
+                    if (text === 'A') { doc.setFillColor(229, 231, 235); doc.setTextColor(107, 114, 128); return; }
                 }
             },
             didDrawCell: function (data) {
@@ -669,27 +681,32 @@ export const MonthlyAllowanceSheet: React.FC<Props> = ({ employees }) => {
                     const h = data.cell.height;
                     const midY = y + h / 2;
 
-                    // Top half: white background
-                    doc.setFillColor(255, 255, 255);
+                    // 1. Top half: match the row's actual background (alternating or white)
+                    const rowFill = data.cell.styles.fillColor as number[] | undefined;
+                    if (Array.isArray(rowFill) && rowFill.length >= 3) {
+                        doc.setFillColor(rowFill[0], rowFill[1], rowFill[2]);
+                    } else {
+                        doc.setFillColor(255, 255, 255);
+                    }
                     doc.rect(x, y, w, h / 2, 'F');
 
-                    // Bottom half: colored background
+                    // 2. Bottom half: colored background
                     if (hasPermit) doc.setFillColor(237, 233, 254);
                     else doc.setFillColor(255, 237, 213);
                     doc.rect(x, midY, w, h / 2 + 0.5, 'F');
 
-                    // Divider line
+                    // 3. Divider line
                     doc.setDrawColor(200, 200, 200);
                     doc.setLineWidth(0.25);
                     doc.line(x, midY, x + w, midY);
 
-                    // Top text (work hours) — dark
+                    // 4. Top text — dark, centered
                     doc.setTextColor(31, 41, 55);
                     doc.setFontSize(7);
                     doc.setFont('helvetica', 'bold');
                     doc.text(line1, x + w / 2, y + h / 4, { align: 'center', baseline: 'middle' });
 
-                    // Bottom text (permit/overtime) — colored
+                    // 5. Bottom text — colored, centered
                     if (hasPermit) doc.setTextColor(107, 33, 168);
                     else doc.setTextColor(154, 52, 18);
                     doc.text(line2, x + w / 2, midY + h / 4, { align: 'center', baseline: 'middle' });
