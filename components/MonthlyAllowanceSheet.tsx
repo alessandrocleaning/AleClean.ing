@@ -524,10 +524,15 @@ export const MonthlyAllowanceSheet: React.FC<Props> = ({ employees }) => {
             const bottomValue = bottomInput?.value?.trim() || '';
 
             const color = badgeLetter === 'P' ? '#6b21a8' : '#9a3412';
-            const bgColor = badgeLetter === 'P' ? '#f3e8ff' : '#ffedd5';
-            td.innerHTML = `<div style="text-align:center;padding:2px 0">` +
-                `<div style="font-weight:bold;font-size:10px;color:#1f2937">${topValue || '—'}</div>` +
-                `<div style="font-weight:bold;font-size:9px;color:${color};background:${bgColor};padding:1px 4px;border-radius:3px;display:inline-block;margin-top:1px">${bottomValue || '0'} ${badgeLetter}</div>` +
+            const bgColor = badgeLetter === 'P' ? '#ede9fe' : '#ffedd5';
+            td.innerHTML =
+                `<div style="text-align:center;padding:0;width:100%;display:table;height:100%">` +
+                `<div style="display:table-row">` +
+                `<div style="display:table-cell;vertical-align:middle;font-weight:bold;font-size:10px;color:#1f2937;padding:3px 1px 2px 1px;border-bottom:1pt solid #d1d5db">${topValue || '—'}</div>` +
+                `</div>` +
+                `<div style="display:table-row">` +
+                `<div style="display:table-cell;vertical-align:middle;font-weight:bold;font-size:9px;color:${color};background:${bgColor};padding:2px 1px 3px 1px">${bottomValue || '0'} ${badgeLetter}</div>` +
+                `</div>` +
                 `</div>`;
         });
 
