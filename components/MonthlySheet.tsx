@@ -1314,79 +1314,25 @@ export const MonthlySheet: React.FC<Props> = ({ employees, sites, setEmployees }
                 );
             },
             didParseCell: function (data) {
-                // Fix header layout for Day columns (D\n1)
+                // Fix header layout for Day columns: letter on top, number on bottom
                 if (data.section === 'head' && data.cell.text && data.cell.text.length > 0) {
                     const rawText = data.cell.text.join(' ').trim();
-                    // Regex to find a single letter followed by one or two digits (e.g. "D 1" or "D1")
                     const match = rawText.match(/^([a-zA-Z])\s*(\d{1,2})$/);
                     if (match) {
-                        // Put Number on top, Letter on bottom
                         data.cell.text = [match[2], match[1]];
                     }
                 }
 
-                // Custom parsing for cells containing split values (Work/Permit)
-                if (data.section === 'body' && data.cell.raw instanceof HTMLElement) {
-                    const cellEl = data.cell.raw as HTMLElement;
-
-                    // Keep name and surname cleanly spaced
-                    if (data.column.index === 0) {
-                        const nameContainer = cellEl.querySelector('.flex-col');
-                        if (nameContainer) {
-                            const spans = Array.from(nameContainer.querySelectorAll('span')).map(s => s.textContent || '');
-                            if (spans.length >= 2) {
-                                data.cell.text = [`${spans[0]} ${spans[1]}`.trim()];
-                            }
-                        }
-                        return; // Done with name cell
-                    }
-
-                    // Handle split hours cells (e.g., 4 work, 4 permit)
-                    const splitContainer = cellEl.querySelector('.flex-col.items-center.justify-center');
-                    if (splitContainer && cellEl.querySelectorAll('span').length > 0) {
-                        // It's a day cell with potentially multiple stacked values
-                        const lines: string[] = [];
-                        const spans = cellEl.querySelectorAll('span');
-                        spans.forEach(span => {
-                            const text = span.textContent?.trim();
-                            if (text) {
-                                // Se è il permesso, ha la "P" vicina o inclusa. 
-                                // Il DOM renderizza <span ...>4</span><span text-[6px]>P</span>
-                                // Se contiene 'P' lo spazio, lo uniamo al numero precedente se serve, 
-                                // ma più semplicemente autoTable ci dà span separati.
-                                // Più sicuro analizzare i nodi testuali:
-                                lines.push(text);
-                            }
-                        });
-
-                        // Il rendering React produce due div principali se c'è split, o span misti.
-                        // Ripuliamo l'output per renderlo "4" su una riga e "4 P" sull'altra.
-                        // Poiché 'text' conterrà ['4', '4', 'P'] se ci sono due div, raggruppiamo la P
-                        const cleanedLines: string[] = [];
-                        for (let i = 0; i < lines.length; i++) {
-                            if (lines[i] === 'P' && cleanedLines.length > 0) {
-                                cleanedLines[cleanedLines.length - 1] += ' P';
-                            } else {
-                                cleanedLines.push(lines[i]);
-                            }
-                        }
-
-                        if (cleanedLines.length > 1) {
-                            data.cell.text = cleanedLines; // Array of strings creates multi-line cell in jsPDF
-                        } else if (cleanedLines.length === 1) {
-                            data.cell.text = [cleanedLines[0]];
-                        }
-                        return;
-                    }
-                }
-
-                // Generic cleanup for other cells to avoid vertical stacking strings without spaces
-                if (data.section === 'body' && data.column.index !== 0 && data.cell.text) {
-                    if (Array.isArray(data.cell.text)) {
+                // Keep name and surname on one line (they may come as separate text nodes)
+                if (data.section === 'body' && data.column.index === 0 && data.cell.text) {
+                    if (Array.isArray(data.cell.text) && data.cell.text.length > 1) {
                         const joined = data.cell.text.map(t => t.trim()).filter(t => t.length > 0).join(' ');
                         data.cell.text = [joined];
                     }
                 }
+                // NOTE: split cells (PERMESSO/STRAORDINARIO) are pre-processed before autoTable is called.
+                // Their HTML already contains two <div> lines, so jsPDF will produce ['4', '4 P'].
+                // We intentionally do NOT join these, so they render as two lines in the PDF.
             },
             willDrawCell: function (data) {
                 // If the cell contains 'P', we change the text color to purple for that cell or 

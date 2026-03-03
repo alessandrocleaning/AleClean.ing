@@ -605,31 +605,24 @@ export const MonthlyAllowanceSheet: React.FC<Props> = ({ employees }) => {
                 );
             },
             didParseCell: function (data) {
-                // Fix header layout for Day columns (D\n1)
+                // Fix header layout for Day columns: number on top, letter on bottom
                 if (data.section === 'head' && data.cell.text && data.cell.text.length > 0) {
                     const rawText = data.cell.text.join(' ').trim();
-                    // Regex to find a single letter followed by one or two digits
                     const match = rawText.match(/^([a-zA-Z])\s*(\d{1,2})$/);
                     if (match) {
-                        // Put Number on top, Letter on bottom
                         data.cell.text = [match[2], match[1]];
                     }
                 }
 
-                // Keep name and surname cleanly spaced
+                // Keep name and surname on one line
                 if (data.section === 'body' && data.column.index === 0 && data.cell.text) {
-                    if (Array.isArray(data.cell.text)) {
+                    if (Array.isArray(data.cell.text) && data.cell.text.length > 1) {
                         const joined = data.cell.text.map(t => t.trim()).filter(t => t.length > 0).join(' ');
                         data.cell.text = [joined];
                     }
                 }
-
-                // Generic cleanup for other cells
-                if (data.section === 'body' && data.column.index !== 0 && data.cell.text) {
-                    if (Array.isArray(data.cell.text)) {
-                        data.cell.text = [data.cell.text.map(t => t.trim()).filter(t => t.length > 0).join(' ')];
-                    }
-                }
+                // NOTE: split cells (PERMESSO/STRAORDINARIO) are pre-processed before autoTable.
+                // jsPDF receives ['4', '4 P'] and renders them on two lines. Do NOT join them.
             }
         });
 
