@@ -941,18 +941,58 @@ export const MonthlySheet: React.FC<Props> = ({ userId, employees, sites, setEmp
         // Check if job is recurring
         const isRecurring = recurringJobs[empId]?.some(j => j.id === jobId);
 
-        if (isRecurring) {
-            // Update Recurring State
-            setRecurringJobs(prev => {
-                const currentExtras = prev[empId] || [];
-                const updatedExtras = currentExtras.map(job => {
-                    if (job.id !== jobId) return job;
-                    if (field === 'hour' && dayNum !== undefined) {
+        if (isRecurring && field === 'hour' && dayNum !== undefined) {
+            // ── CASO SPECIALE: modifica delle ORE di un job ricorrente ──
+            // NON modifichiamo il job globale (che vale per tutti i mesi).
+            // Invece creiamo/aggiorniamo una copia locale per QUESTO mese in monthlyData.extraJobs.
+            setMonthlyData(prev => {
+                const recurringJob = (recurringJobs[empId] || []).find(j => j.id === jobId);
+                if (!recurringJob) return prev;
+
+                const currentMonthlyExtras = prev.extraJobs?.[empId] || [];
+                // Cerchiamo se esiste già una copia locale per questo mese
+                const existingLocalCopy = currentMonthlyExtras.find(j => j.id === jobId);
+
+                let updatedExtras: ExtraJob[];
+                if (existingLocalCopy) {
+                    // Aggiorniamo la copia locale esistente
+                    updatedExtras = currentMonthlyExtras.map(job => {
+                        if (job.id !== jobId) return job;
                         const newHours = { ...job.hours };
                         if (value === 0 || value === '') delete newHours[dayNum];
                         else newHours[dayNum] = parseFloat(value);
                         return { ...job, hours: newHours };
-                    } else if (field === 'description') {
+                    });
+                } else {
+                    // Prima modifica: creiamo una copia locale a partire dal job ricorrente
+                    // con le ore già presenti + la nuova modifica
+                    const newHours = { ...recurringJob.hours };
+                    if (value === 0 || value === '') delete newHours[dayNum];
+                    else newHours[dayNum] = parseFloat(value);
+                    const localCopy: ExtraJob = {
+                        ...recurringJob,
+                        hours: newHours,
+                        isLocked: false, // La copia locale NON è ricorrente (è già per questo mese)
+                        startMonth: undefined,
+                    };
+                    updatedExtras = [...currentMonthlyExtras, localCopy];
+                }
+
+                const newData = {
+                    ...prev,
+                    extraJobs: { ...prev.extraJobs, [empId]: updatedExtras }
+                };
+                syncToCloud(storageKeyRaw, newData);
+                return newData;
+            });
+
+        } else if (isRecurring) {
+            // Aggiorna il job ricorrente globale (solo description / value — non le ore)
+            setRecurringJobs(prev => {
+                const currentExtras = prev[empId] || [];
+                const updatedExtras = currentExtras.map(job => {
+                    if (job.id !== jobId) return job;
+                    if (field === 'description') {
                         return { ...job, description: value };
                     } else if (field === 'value') {
                         return { ...job, value: parseFloat(value) || 0 };
@@ -964,7 +1004,7 @@ export const MonthlySheet: React.FC<Props> = ({ userId, employees, sites, setEmp
                 return newRecurring;
             });
         } else {
-            // Update Monthly State
+            // Update Monthly State (job non ricorrente)
             setMonthlyData(prev => {
                 const currentExtras = prev.extraJobs?.[empId] || [];
                 const updatedExtras = currentExtras.map(job => {
@@ -1787,7 +1827,9 @@ export const MonthlySheet: React.FC<Props> = ({ userId, employees, sites, setEmp
                                 const empRecurring = recurringJobs[emp.id] || [];
                                 const empMonthly = monthlyData.extraJobs?.[emp.id] || [];
                                 const visibleRecurring = empRecurring.filter(job => !job.startMonth || job.startMonth <= storageKeyRaw);
-                                const extraJobs = [...empMonthly, ...visibleRecurring];
+                                // La copia locale mensile ha precedenza sul job ricorrente con lo stesso id
+                                const localOverrideIds = new Set(empMonthly.map(j => j.id));
+                                const extraJobs = [...empMonthly, ...visibleRecurring.filter(j => !localOverrideIds.has(j.id))];
                                 const isExpanded = expandedEmpIds.has(emp.id);
 
                                 // Separatore tra dipendenti "In Cedolini" e "Non in Cedolini"
