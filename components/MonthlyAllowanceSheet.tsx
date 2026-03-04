@@ -714,34 +714,25 @@ export const MonthlyAllowanceSheet: React.FC<Props> = ({ userId, employees }) =>
                     const h = data.cell.height;
                     const midY = y + h / 2;
 
-                    // 1. Top half: match the row's actual background (alternating or white)
+                    // 1. Background for both halves: match the row's actual background
                     const rowFill = data.cell.styles.fillColor as number[] | undefined;
                     if (Array.isArray(rowFill) && rowFill.length >= 3) {
                         doc.setFillColor(rowFill[0], rowFill[1], rowFill[2]);
                     } else {
                         doc.setFillColor(255, 255, 255);
                     }
-                    doc.rect(x, y, w, h / 2, 'F');
+                    doc.rect(x, y, w, h, 'F');
 
-                    // 2. Bottom half: colored background
-                    if (hasPermit) doc.setFillColor(237, 233, 254);
-                    else doc.setFillColor(255, 237, 213);
-                    doc.rect(x, midY, w, h / 2 + 0.5, 'F');
-
-                    // 3. Divider line
+                    // 2. Horizontal divider line
                     doc.setDrawColor(200, 200, 200);
                     doc.setLineWidth(0.25);
                     doc.line(x, midY, x + w, midY);
 
-                    // 4. Top text — dark, centered
+                    // 3. Texts — normal font, dark text
                     doc.setTextColor(31, 41, 55);
                     doc.setFontSize(7);
-                    doc.setFont('helvetica', 'bold');
+                    doc.setFont('helvetica', 'normal');
                     doc.text(line1, x + w / 2, y + h / 4, { align: 'center', baseline: 'middle' });
-
-                    // 5. Bottom text — colored, centered
-                    if (hasPermit) doc.setTextColor(107, 33, 168);
-                    else doc.setTextColor(154, 52, 18);
                     doc.text(line2, x + w / 2, midY + h / 4, { align: 'center', baseline: 'middle' });
                 }
             }
