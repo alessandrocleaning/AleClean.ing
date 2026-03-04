@@ -1790,6 +1790,13 @@ export const MonthlySheet: React.FC<Props> = ({ userId, employees, sites, setEmp
                                 const extraJobs = [...empMonthly, ...visibleRecurring];
                                 const isExpanded = expandedEmpIds.has(emp.id);
 
+                                // Separatore tra dipendenti "In Cedolini" e "Non in Cedolini"
+                                const hasAnyAllowance = employees.some(e => e.showInAllowances !== false);
+                                const hasAnyNonAllowance = employees.some(e => e.showInAllowances === false);
+                                const isFirstNonAllowance = hasAnyAllowance && hasAnyNonAllowance
+                                    && emp.showInAllowances === false
+                                    && employees.slice(0, index).every(e => e.showInAllowances !== false);
+
                                 let totalWork = 0;
                                 let totalPermit = 0;
                                 let totalOvertime = 0;
@@ -1841,6 +1848,17 @@ export const MonthlySheet: React.FC<Props> = ({ userId, employees, sites, setEmp
 
                                 return (
                                     <React.Fragment key={emp.id}>
+                                        {/* ── Separatore visivo: dipendenti NON in cedolini ── */}
+                                        {isFirstNonAllowance && (
+                                            <tr className="border-t-4 border-slate-300">
+                                                <td
+                                                    colSpan={999}
+                                                    className="sticky left-0 bg-slate-100 px-4 py-1.5 text-[11px] font-bold text-slate-500 uppercase tracking-widest border-b border-slate-200 select-none"
+                                                >
+                                                    ↓ Non inclusi in Cedolini
+                                                </td>
+                                            </tr>
+                                        )}
                                         <tr className={`group ${rowBg} hover:bg-blue-50/30 transition-colors border-b border-gray-100`}>
                                             <td className={`sticky left-0 z-10 p-0 border-r border-gray-200 font-bold text-sm text-gray-800 ${rowBg} shadow-[4px_0_12px_-2px_rgba(0,0,0,0.05)]`}>
                                                 <div className="flex items-center justify-between px-3 py-2 w-full h-full border-l-4 border-transparent hover:border-[#004aad] transition-colors relative">
