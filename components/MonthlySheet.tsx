@@ -1944,25 +1944,26 @@ export const MonthlySheet: React.FC<Props> = ({ userId, employees, sites, setEmp
                                             {/* Totale */}
                                             <td className={`p-3 border-l border-gray-200 text-center font-black text-gray-800 ${COL_W_HOUR}`}>{totalWork}</td>
 
-                                            {/* Contratto = TOTALE Cedolini (stesso calcolo) */}
+                                            {/* Contratto = TOTALE Cedolini (ore contrattuali meno assenze) */}
                                             <td className={`p-3 border-gray-200 text-center font-medium text-gray-500 ${COL_W_HOUR}`}>
                                                 {(() => {
-                                                    // Cedolini ignora gli override WORK e usa sempre le ore contrattuali calcolate.
-                                                    // Solo FERIE/MALATTIA/ASSENZA/PERMESSO/STRAORDINARIO alterano il totale.
+                                                    // Usa emp.contractHours (come totalContract) ma sottrae i giorni di assenza
+                                                    // ignorando gli override WORK, esattamente come Cedolini
                                                     let twCed = 0;
                                                     daysColumns.forEach(day => {
+                                                        if (day.isHoliday) return;
+                                                        const contractDay = emp.contractHours?.[day.dayKey] || 0;
+                                                        if (contractDay === 0) return;
                                                         const key = `${emp.id}-${day.dayNum}`;
                                                         const override = monthlyData.overrides[key];
-                                                        const calculated = getStandardHours(emp, day);
-                                                        if (override && override.type !== 'WORK') {
-                                                            const t = override.type;
-                                                            const v = override.value;
-                                                            if (t === 'PERMESSO') twCed += Math.max(0, calculated - v);
-                                                            else if (t === 'STRAORDINARIO') twCed += calculated;
-                                                            // FERIE / MALATTIA / ASSENZA → 0
-                                                        } else {
-                                                            twCed += calculated; // nessun override o override WORK → ore contrattuali
+                                                        if (!override || override.type === 'WORK') {
+                                                            twCed += contractDay;
+                                                        } else if (override.type === 'PERMESSO') {
+                                                            twCed += Math.max(0, contractDay - override.value);
+                                                        } else if (override.type === 'STRAORDINARIO') {
+                                                            twCed += contractDay;
                                                         }
+                                                        // FERIE / MALATTIA / ASSENZA → aggiunge 0
                                                     });
                                                     return Math.round(twCed * 100) / 100;
                                                 })()}
