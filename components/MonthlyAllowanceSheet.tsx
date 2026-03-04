@@ -446,22 +446,26 @@ export const MonthlyAllowanceSheet: React.FC<Props> = ({ userId, employees }) =>
         // Clean up inputs and labels in the cloned table for Excel
         const inputs = clone.querySelectorAll('input');
         inputs.forEach(input => {
-            const val = input.value;
-            const cell = input.closest('td');
-            if (cell) {
-                const modeButton = cell.querySelector('button');
-                if (modeButton && (modeButton.textContent === 'Netto' || modeButton.textContent === 'Lordo')) {
-                    if (!val || val === '0') {
-                        cell.innerHTML = '';
+            try {
+                const val = input.value;
+                const cell = input.closest('td');
+                if (cell) {
+                    const modeButton = cell.querySelector('button');
+                    if (modeButton && (modeButton.textContent === 'Netto' || modeButton.textContent === 'Lordo')) {
+                        if (!val || val === '0') {
+                            cell.innerHTML = '';
+                        } else {
+                            cell.innerHTML = `<span style="font-weight:bold">${val}</span> ${modeButton.textContent}`;
+                        }
                     } else {
-                        cell.innerHTML = `<span style="font-weight:bold">${val}</span> ${modeButton.textContent}`;
-                    }
-                } else {
-                    const parent = input.parentElement;
-                    if (parent && (input.type === 'number' || input.type === 'time' || input.type === 'text')) {
-                        parent.innerHTML = `<span style="font-weight:bold">${val || ''}</span>`;
+                        const parent = input.parentElement;
+                        if (parent && (input.type === 'number' || input.type === 'time' || input.type === 'text')) {
+                            parent.innerHTML = val ? `<span style="font-weight:bold">${val}</span>` : '';
+                        }
                     }
                 }
+            } catch (e) {
+                console.warn('Error parsing input for Excel:', e);
             }
         });
 
@@ -547,22 +551,26 @@ export const MonthlyAllowanceSheet: React.FC<Props> = ({ userId, employees }) =>
         // Clean up inputs (replace with text)
         const inputs = clone.querySelectorAll('input');
         inputs.forEach(input => {
-            const val = input.value;
-            const cell = input.closest('td');
-            if (cell) {
-                const modeButton = cell.querySelector('button');
-                if (modeButton && (modeButton.textContent === 'Netto' || modeButton.textContent === 'Lordo')) {
-                    if (!val || val === '0') {
-                        cell.innerHTML = '';
+            try {
+                const val = input.value;
+                const cell = input.closest('td');
+                if (cell) {
+                    const modeButton = cell.querySelector('button');
+                    if (modeButton && (modeButton.textContent === 'Netto' || modeButton.textContent === 'Lordo')) {
+                        if (!val || val === '0') {
+                            cell.innerHTML = '';
+                        } else {
+                            cell.innerHTML = `${val} ${modeButton.textContent}`;
+                        }
                     } else {
-                        cell.innerHTML = `${val} ${modeButton.textContent}`;
-                    }
-                } else {
-                    const parent = input.parentElement;
-                    if (parent && (input.type === 'number' || input.type === 'time' || input.type === 'text')) {
-                        parent.innerHTML = val || '';
+                        const parent = input.parentElement;
+                        if (parent && (input.type === 'number' || input.type === 'time' || input.type === 'text')) {
+                            parent.innerHTML = val || '';
+                        }
                     }
                 }
+            } catch (e) {
+                console.warn('Error parsing input for PDF:', e);
             }
         });
 
