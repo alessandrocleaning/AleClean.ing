@@ -626,60 +626,81 @@ export const SiteManager: React.FC<Props> = ({ sites, setSites, employees, setEm
                                         </select>
                                     </div>
                                 ) : (
-                                    <div className="flex flex-col md:grid md:grid-cols-[1.5fr_1.5fr_1fr_1fr] lg:grid-cols-[2fr_1.5fr_120px_1fr_1fr] gap-2 md:gap-3 w-full items-start md:items-center">
-                                        <div className="font-bold text-gray-800 text-sm flex items-start gap-2 w-full pr-2">
-                                            <span className="w-2 h-2 rounded-full bg-[#004aad] flex-shrink-0 mt-1.5"></span>
-                                            <span className="leading-tight break-words flex-1">{site.name}</span>
+                                    <div className="flex flex-col md:grid md:grid-cols-[1.5fr_1.5fr_1fr_1fr] lg:grid-cols-[2fr_1.5fr_120px_1fr_1fr] gap-2 md:gap-3 w-full items-start md:items-center min-w-0">
 
-                                            {/* Avatar spostati in alto a destra su mobile rispetto al nome */}
-                                            <div className="flex items-center md:hidden ml-auto">
+                                        {/* SU MOBILE: RIGA 1 (Nome max esteso + Fatturato + Badge numerico Operatori) */}
+                                        <div className="flex items-start justify-between gap-2 w-full md:hidden min-w-0">
+                                            {/* NOME CANTIERE (priorità assoluta) */}
+                                            <div className="font-bold text-gray-800 text-sm flex items-start gap-2 flex-1 min-w-0">
+                                                <span className="w-2 h-2 rounded-full bg-[#004aad] flex-shrink-0 mt-1.5"></span>
+                                                <span className="leading-tight break-words min-w-0">{site.name}</span>
+                                            </div>
+
+                                            {/* FATTURATO E OPERATORI COMPATTATI */}
+                                            <div className="flex items-center gap-2 flex-shrink-0">
+                                                {/* FATTURATO (2° priorità) */}
+                                                {site.netMonthlyRevenue !== undefined && (
+                                                    <div className="flex items-center gap-1 text-[11px] font-bold text-[#004aad] bg-blue-50/50 px-1.5 py-0.5 rounded border border-blue-50 whitespace-nowrap">
+                                                        <Euro className="w-3 h-3" />
+                                                        <span>{site.netMonthlyRevenue.toLocaleString('it-IT', { style: 'currency', currency: 'EUR' })}</span>
+                                                    </div>
+                                                )}
+
+                                                {/* OPERATORI COMPATTATI IN UN NUMERO (3° priorità) */}
                                                 {(() => {
                                                     const assignedEmp = employees.filter(e => e.defaultAssignments.some(a => a.siteId === site.id));
                                                     if (assignedEmp.length === 0) return null;
-                                                    const maxVisible = 2;
-                                                    const visibleList = assignedEmp.slice(0, maxVisible);
-                                                    const remaining = assignedEmp.length - maxVisible;
-
                                                     return (
-                                                        <div className="flex -space-x-1.5">
-                                                            {visibleList.map((emp) => (
-                                                                <div
-                                                                    key={emp.id}
-                                                                    className="w-5 h-5 rounded-full bg-indigo-100 text-[#004aad] font-bold text-[8px] flex items-center justify-center border border-white shadow-sm ring-1 ring-[#004aad]/20"
-                                                                >
-                                                                    {emp.firstName.charAt(0)}{emp.lastName.charAt(0)}
-                                                                </div>
-                                                            ))}
-                                                            {remaining > 0 && (
-                                                                <div className="w-5 h-5 rounded-full bg-gray-100 text-gray-600 font-bold text-[7px] flex items-center justify-center border border-white shadow-sm">
-                                                                    +{remaining}
-                                                                </div>
-                                                            )}
+                                                        <div
+                                                            className="w-6 h-6 rounded-full bg-indigo-100 text-[#004aad] font-bold text-[10px] flex items-center justify-center border border-white shadow-sm ring-1 ring-[#004aad]/20 flex-shrink-0"
+                                                            title={`${assignedEmp.length} dipendenti assegnati`}
+                                                        >
+                                                            {assignedEmp.length}
                                                         </div>
                                                     );
                                                 })()}
                                             </div>
                                         </div>
 
-                                        <div className="flex items-center min-w-0 md:order-2 w-full justify-between md:justify-start">
+                                        {/* SU MOBILE: RIGA 2 (Categoria + Indirizzo visibile solo se c'è spazio sufficiente - flex-wrap) */}
+                                        <div className="flex flex-wrap items-center gap-2 md:hidden w-full min-w-0">
+                                            {/* CATEGORIA (4° priorità) */}
+                                            {site.category && (
+                                                <span className={`inline-flex px-1.5 py-0.5 rounded text-[10px] uppercase tracking-wider font-extrabold border ${CATEGORY_COLORS[site.category].bg} ${CATEGORY_COLORS[site.category].text} ${CATEGORY_COLORS[site.category].border} shrink-0`}>
+                                                    {site.category}
+                                                </span>
+                                            )}
+                                            {/* INDIRIZZO (5° priorità, truncato o nascosto) */}
+                                            {(site.address || site.city) && (
+                                                <div className="flex items-center gap-1 text-[11px] font-medium text-gray-500 bg-gray-50 px-1.5 py-0.5 rounded border border-gray-100 min-w-0 max-w-full hidden sm:flex">
+                                                    <Map className="w-3 h-3 text-gray-400 flex-shrink-0" />
+                                                    <span className="truncate">
+                                                        {site.address}{site.address && site.city ? ', ' : ''}{site.city}
+                                                    </span>
+                                                </div>
+                                            )}
+                                        </div>
+
+
+                                        {/* SU DESKTOP E TABLET: NOME */}
+                                        <div className="hidden md:flex font-bold text-gray-800 text-sm items-center gap-2 order-1 lg:order-1 min-w-0">
+                                            <span className="w-2 h-2 rounded-full bg-[#004aad] flex-shrink-0"></span>
+                                            <span className="truncate">{site.name}</span>
+                                        </div>
+
+                                        {/* SU DESKTOP E TABLET: INDIRIZZO */}
+                                        <div className="hidden md:flex items-center min-w-0 order-2 lg:order-2">
                                             {(site.address || site.city) ? (
-                                                <div className="flex items-center gap-1.5 text-[11px] md:text-xs font-medium text-gray-500 bg-gray-50 px-2 py-1 rounded-md border border-gray-100 max-w-[75%] md:max-w-full">
+                                                <div className="flex items-center gap-1.5 text-xs font-medium text-gray-500 bg-gray-50 px-2 py-1 rounded-md border border-gray-100 max-w-full">
                                                     <Map className="w-3 h-3 text-gray-400 flex-shrink-0" />
                                                     <span className="truncate">
                                                         {site.address}{site.address && site.city ? ', ' : ''}{site.city}
                                                     </span>
                                                 </div>
                                             ) : <div></div>}
-
-                                            {/* Importo in basso a destra su mobile (stessa riga dell'indirizzo) */}
-                                            {site.netMonthlyRevenue !== undefined && (
-                                                <div className="flex items-center gap-1 text-[11px] md:text-xs font-bold text-[#004aad] bg-blue-50/50 px-2 py-1 rounded-md md:hidden ml-auto border border-blue-50 shrink-0">
-                                                    <Euro className="w-3 h-3" />
-                                                    <span>{site.netMonthlyRevenue.toLocaleString('it-IT', { style: 'currency', currency: 'EUR' })}</span>
-                                                </div>
-                                            )}
                                         </div>
 
+                                        {/* SU DESKTOP: CATEGORIA */}
                                         <div className="hidden lg:flex items-center lg:order-3 justify-start">
                                             {site.category && (
                                                 <span className={`inline-flex px-1.5 py-0.5 rounded text-[10px] uppercase tracking-wider font-extrabold border ${CATEGORY_COLORS[site.category].bg} ${CATEGORY_COLORS[site.category].text} ${CATEGORY_COLORS[site.category].border} shrink-0`}>
@@ -688,6 +709,7 @@ export const SiteManager: React.FC<Props> = ({ sites, setSites, employees, setEm
                                             )}
                                         </div>
 
+                                        {/* SU DESKTOP E TABLET: FATTURATO */}
                                         <div className="hidden md:flex items-center justify-center order-3 md:order-4">
                                             {site.netMonthlyRevenue !== undefined && (
                                                 <div className="flex items-center gap-1.5 text-xs font-bold text-[#004aad] bg-blue-50 px-2 py-1 rounded-md border border-blue-100 whitespace-nowrap">
@@ -697,13 +719,14 @@ export const SiteManager: React.FC<Props> = ({ sites, setSites, employees, setEm
                                             )}
                                         </div>
 
+                                        {/* SU DESKTOP E TABLET: OPERATORI */}
                                         <div className="hidden md:flex items-center justify-end order-4 md:order-5">
                                             {(() => {
                                                 const assignedEmployees = employees.filter(e => e.defaultAssignments.some(a => a.siteId === site.id));
                                                 if (assignedEmployees.length === 0) return <div className="w-1"></div>;
                                                 return (
                                                     <div className="flex items-center gap-1">
-                                                        <Users className="w-3 h-3 text-gray-400 mr-1 hidden lg:block" />
+                                                        <Users className="w-3 h-3 text-gray-400 hidden lg:block mr-1" />
                                                         <div className="flex -space-x-1">
                                                             {assignedEmployees.map((emp) => (
                                                                 <div
