@@ -651,7 +651,7 @@ const DayInputCell = React.memo(({ empId, dayNum, data, calculatedStandardHours,
         );
     } else {
         if (isRedColumn) {
-            bgClass = 'bg-red-50/50 hover:bg-red-50';
+            bgClass = 'bg-red-50 hover:bg-red-100';
         } else if (isEvenRow) {
             bgClass = 'bg-slate-50 hover:bg-gray-100';
         } else {
@@ -1745,7 +1745,7 @@ export const MonthlySheet: React.FC<Props> = ({ userId, employees, sites, setEmp
                             <tr className="text-white">
                                 <th className={`sticky left-0 top-0 z-40 bg-[#004aad] p-4 text-left w-[220px] min-w-[220px] border-b border-white/10 border-r border-white/10 font-bold uppercase text-xs tracking-wider shadow-[4px_0_12px_-2px_rgba(0,0,0,0.3)]`}>Dipendente</th>
                                 {!isDaysCollapsed && daysColumns.map(day => (
-                                    <th key={day.dayNum} className={`p-2 min-w-[3.5rem] text-center bg-[#004aad] border-b border-white/10 border-l border-white/5 ${day.isSunday ? 'bg-blue-800/50' : ''}`}>
+                                    <th key={day.dayNum} className={`p-2 min-w-[3.5rem] text-center border-b border-white/10 border-l border-white/5 ${day.isSunday || day.isHoliday ? 'bg-blue-800' : 'bg-[#004aad]'}`}>
                                         <div className="flex flex-col items-center">
                                             <span className="text-[10px] opacity-70 uppercase font-medium text-blue-100">{day.dayName}</span>
                                             <span className={`text-xl font-black ${day.isHoliday ? 'text-[#ffec09]' : 'text-white'}`}>{day.dayNum}</span>
