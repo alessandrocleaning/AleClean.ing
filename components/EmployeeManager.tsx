@@ -935,15 +935,15 @@ export const EmployeeManager: React.FC<Props> = ({ employees, sites, setEmployee
                                             </>
                                         ) : (
                                             <>
-                                                <button onClick={(e) => startEditing(e, emp)} className="p-2 rounded-lg text-gray-400 hover:text-[#004aad] hover:bg-blue-50 transition-colors"><Pencil className="w-5 h-5" /></button>
+                                                <button onClick={(e) => startEditing(e, emp)} className="p-1.5 lg:p-2 rounded-lg text-gray-400 hover:text-[#004aad] hover:bg-blue-50 transition-colors"><Pencil className="w-4 h-4 lg:w-5 lg:h-5" /></button>
                                                 <button
                                                     onClick={(e) => { e.stopPropagation(); setEmpToDelete(emp.id); }}
-                                                    className="p-2 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                                                    className="p-1.5 lg:p-2 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
                                                 >
-                                                    <Trash2 className="w-5 h-5" />
+                                                    <Trash2 className="w-4 h-4 lg:w-5 lg:h-5" />
                                                 </button>
-                                                <div className={`ml-2 transform transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`}>
-                                                    <ChevronDown className="w-5 h-5 text-gray-400" />
+                                                <div className={`ml-1 lg:ml-2 transform transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`}>
+                                                    <ChevronDown className="w-4 h-4 lg:w-5 lg:h-5 text-gray-400" />
                                                 </div>
                                             </>
                                         )}
