@@ -1141,7 +1141,7 @@ export const MonthlyAllowanceSheet: React.FC<Props> = ({ userId, employees }) =>
                                                 <div className="relative flex items-center h-full w-full">
                                                     <button onClick={() => handleUpdateMonthlySalaryMode(emp.id)} className={`absolute right-1 z-10 text-[9px] font-black w-4 h-4 flex items-center justify-center rounded cursor-pointer transition-all select-none border ${targetMode === 'NET' ? 'bg-cyan-50 text-cyan-600 border-cyan-200 hover:bg-cyan-100' : 'bg-orange-50 text-orange-600 border-orange-200 hover:bg-orange-100'}`} title={targetMode === 'NET' ? 'Passa a Lordo' : 'Passa a Netto'}>{targetMode === 'NET' ? 'N' : 'L'}</button>
                                                     <span className="absolute right-6 z-10 text-cyan-600 text-[10px] pointer-events-none font-bold opacity-80">€</span>
-                                                    <input type="number" min="0" step="10" value={target === 0 ? '' : target} onChange={(e) => { const val = e.target.value === '' ? 0 : parseFloat(e.target.value); handleUpdateMonthlySalary(emp.id, val); }} className={`w-full h-full text-right bg-transparent text-sm font-bold text-cyan-900 hover:bg-cyan-50 focus:bg-cyan-50 outline-none focus:border-cyan-500 transition-all pr-11 pl-2 ${NO_SPINNER_CLASS}`} placeholder="0" />
+                                                    <input type="number" min="0" step="10" value={target === 0 ? '' : target} onChange={(e) => { const val = e.target.value === '' ? 0 : parseFloat(e.target.value); handleUpdateMonthlySalary(emp.id, val); }} onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }} className={`w-full h-full text-right bg-transparent text-sm font-bold text-cyan-900 hover:bg-cyan-50 focus:bg-cyan-50 outline-none focus:border-cyan-500 transition-all pr-11 pl-2 ${NO_SPINNER_CLASS}`} placeholder="0" />
                                                 </div>
                                             </td>
 
@@ -1166,6 +1166,7 @@ export const MonthlyAllowanceSheet: React.FC<Props> = ({ userId, employees }) =>
                                                     type="text"
                                                     value={monthlyData.sickLeaveCodes?.[emp.id] || ''}
                                                     onChange={(e) => handleUpdateSickLeaveCode(emp.id, e.target.value)}
+                                                    onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
                                                     className={`w-full text-center bg-transparent text-xs font-bold text-red-700 placeholder-red-200/50 outline-none border-b border-gray-200 focus:border-red-400 transition-all uppercase ${NO_SPINNER_CLASS}`}
                                                     placeholder="PUC..."
                                                     title="Inserisci Codice PUC Malattia"

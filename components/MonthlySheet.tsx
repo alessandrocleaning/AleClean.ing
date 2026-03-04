@@ -1905,7 +1905,7 @@ export const MonthlySheet: React.FC<Props> = ({ userId, employees, sites, setEmp
                                             <td className={`p-0 border-l-4 border-gray-50 text-center relative group/rate ${COL_W_RATE}`}>
                                                 <div className="relative flex items-center h-full w-full">
                                                     <span className="absolute right-5 z-10 text-indigo-400 text-[10px] pointer-events-none font-bold">€</span>
-                                                    <input type="number" min="0" step="0.5" value={rate === 0 ? '' : rate} onChange={(e) => { const val = e.target.value === '' ? 0 : parseFloat(e.target.value); setEmployees(prev => prev.map(ev => ev.id === emp.id ? { ...ev, hourlyRate: val } : ev)); }} className={`w-full h-full text-right bg-transparent text-sm font-bold text-indigo-700 hover:bg-indigo-50 focus:bg-indigo-50 focus:text-indigo-900 outline-none transition-all pr-9 pl-2 ${NO_SPINNER_CLASS}`} placeholder="0" />
+                                                    <input type="number" min="0" step="0.5" value={rate === 0 ? '' : rate} onChange={(e) => { const val = e.target.value === '' ? 0 : parseFloat(e.target.value); setEmployees(prev => prev.map(ev => ev.id === emp.id ? { ...ev, hourlyRate: val } : ev)); }} onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }} className={`w-full h-full text-right bg-transparent text-sm font-bold text-indigo-700 hover:bg-indigo-50 focus:bg-indigo-50 focus:text-indigo-900 outline-none transition-all pr-9 pl-2 ${NO_SPINNER_CLASS}`} placeholder="0" />
                                                 </div>
                                             </td>
 
@@ -1914,7 +1914,7 @@ export const MonthlySheet: React.FC<Props> = ({ userId, employees, sites, setEmp
                                                 <div className="relative flex items-center h-full w-full">
                                                     <button onClick={() => handleUpdateMonthlySalaryMode(emp.id)} className={`absolute right-1 z-10 text-[9px] font-black w-4 h-4 flex items-center justify-center rounded cursor-pointer transition-all select-none border ${targetMode === 'NET' ? 'bg-cyan-50 text-cyan-600 border-cyan-200 hover:bg-cyan-100' : 'bg-orange-50 text-orange-600 border-orange-200 hover:bg-orange-100'}`} title={targetMode === 'NET' ? 'Passa a Lordo' : 'Passa a Netto'}>{targetMode === 'NET' ? 'N' : 'L'}</button>
                                                     <span className="absolute right-7 z-10 text-cyan-500 text-[10px] pointer-events-none font-bold opacity-90">€</span>
-                                                    <input type="number" min="0" step="10" value={target === 0 ? '' : target} onChange={(e) => { const val = e.target.value === '' ? 0 : parseFloat(e.target.value); handleUpdateMonthlySalary(emp.id, val); }} className={`w-full h-full text-right bg-transparent text-sm font-bold text-cyan-900 hover:bg-cyan-50 focus:bg-cyan-50 outline-none focus:border-cyan-500 transition-all pr-11 pl-2 ${NO_SPINNER_CLASS}`} placeholder="0" />
+                                                    <input type="number" min="0" step="10" value={target === 0 ? '' : target} onChange={(e) => { const val = e.target.value === '' ? 0 : parseFloat(e.target.value); handleUpdateMonthlySalary(emp.id, val); }} onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }} className={`w-full h-full text-right bg-transparent text-sm font-bold text-cyan-900 hover:bg-cyan-50 focus:bg-cyan-50 outline-none focus:border-cyan-500 transition-all pr-11 pl-2 ${NO_SPINNER_CLASS}`} placeholder="0" />
                                                 </div>
                                             </td>
 
@@ -1940,6 +1940,7 @@ export const MonthlySheet: React.FC<Props> = ({ userId, employees, sites, setEmp
                                                     type="text"
                                                     value={monthlyData.sickLeaveCodes?.[emp.id] || ''}
                                                     onChange={(e) => handleUpdateSickLeaveCode(emp.id, e.target.value)}
+                                                    onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
                                                     className={`w-full text-center bg-transparent text-xs font-bold text-red-700 placeholder-red-200/50 outline-none border-b border-gray-200 focus:border-red-400 transition-all uppercase ${NO_SPINNER_CLASS}`}
                                                     placeholder="PUC..."
                                                     title="Inserisci Codice PUC Malattia"
@@ -1956,7 +1957,7 @@ export const MonthlySheet: React.FC<Props> = ({ userId, employees, sites, setEmp
                                                 <tr key={job.id} className="bg-yellow-50/50 hover:bg-yellow-50 transition-colors border-b border-gray-100/50">
                                                     <td className="sticky left-0 z-10 p-0 border-r border-gray-200 bg-yellow-50/80 backdrop-blur-[2px] shadow-[4px_0_12px_-2px_rgba(0,0,0,0.02)]">
                                                         <div className="flex items-center px-3 py-1.5 w-full h-full border-l-4 border-yellow-300 gap-2">
-                                                            <input type="text" value={job.description} onChange={(e) => handleUpdateExtraJob(emp.id, job.id, 'description', e.target.value)} className="flex-1 min-w-0 bg-transparent text-xs font-semibold text-gray-700 outline-none placeholder-gray-400" placeholder="Descrizione lavoro extra..." />
+                                                            <input type="text" value={job.description} onChange={(e) => handleUpdateExtraJob(emp.id, job.id, 'description', e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }} className="flex-1 min-w-0 bg-transparent text-xs font-semibold text-gray-700 outline-none placeholder-gray-400" placeholder="Descrizione lavoro extra..." />
 
                                                             {/* LOCK TOGGLE */}
                                                             <button
@@ -1974,7 +1975,7 @@ export const MonthlySheet: React.FC<Props> = ({ userId, employees, sites, setEmp
                                                         const val = job.hours[day.dayNum] || 0;
                                                         return (
                                                             <td key={day.dayNum} className="border-r border-gray-100 p-0 h-[2.5rem] text-center align-middle">
-                                                                <input type="number" min="0" step="0.5" value={val === 0 ? '' : val} onChange={(e) => handleUpdateExtraJob(emp.id, job.id, 'hour', e.target.value, day.dayNum)} className={`w-full h-full text-center bg-transparent outline-none text-xs text-gray-600 font-medium ${NO_SPINNER_CLASS} focus:bg-yellow-100 transition-colors`} placeholder="-" />
+                                                                <input type="number" min="0" step="0.5" value={val === 0 ? '' : val} onChange={(e) => handleUpdateExtraJob(emp.id, job.id, 'hour', e.target.value, day.dayNum)} onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }} className={`w-full h-full text-center bg-transparent outline-none text-xs text-gray-600 font-medium ${NO_SPINNER_CLASS} focus:bg-yellow-100 transition-colors`} placeholder="-" />
                                                             </td>
                                                         );
                                                     })}
@@ -1986,7 +1987,7 @@ export const MonthlySheet: React.FC<Props> = ({ userId, employees, sites, setEmp
                                                     <td className={`text-center text-xs text-gray-300 ${COL_W_TARGET}`}>-</td>
                                                     <td className={`p-1 text-center ${COL_W_MONEY}`}>
                                                         <div className="relative flex items-center justify-center">
-                                                            <input type="number" min="0" step="1" value={job.value === 0 ? '' : job.value} onChange={(e) => handleUpdateExtraJob(emp.id, job.id, 'value', e.target.value)} className={`w-20 text-center bg-white border border-yellow-200 rounded px-1 py-0.5 text-xs font-bold text-gray-700 outline-none focus:border-yellow-400 ${NO_SPINNER_CLASS}`} placeholder="Valore €" />
+                                                            <input type="number" min="0" step="1" value={job.value === 0 ? '' : job.value} onChange={(e) => handleUpdateExtraJob(emp.id, job.id, 'value', e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }} className={`w-20 text-center bg-white border border-yellow-200 rounded px-1 py-0.5 text-xs font-bold text-gray-700 outline-none focus:border-yellow-400 ${NO_SPINNER_CLASS}`} placeholder="Valore €" />
                                                         </div>
                                                     </td>
                                                     <td colSpan={4} className="text-center text-[10px] text-gray-400 border-l border-gray-100 italic pt-2">
