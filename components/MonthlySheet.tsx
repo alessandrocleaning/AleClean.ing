@@ -1904,8 +1904,8 @@ export const MonthlySheet: React.FC<Props> = ({ userId, employees, sites, setEmp
                                             {/* Tariffa */}
                                             <td className={`p-0 border-l-4 border-gray-50 text-center relative group/rate ${COL_W_RATE}`}>
                                                 <div className="relative flex items-center h-full w-full">
-                                                    <span className="absolute right-2 z-10 text-indigo-400 text-[10px] pointer-events-none font-bold">€</span>
-                                                    <input type="number" min="0" step="0.5" value={rate === 0 ? '' : rate} onChange={(e) => { const val = e.target.value === '' ? 0 : parseFloat(e.target.value); setEmployees(prev => prev.map(ev => ev.id === emp.id ? { ...ev, hourlyRate: val } : ev)); }} className={`w-full h-full text-center bg-transparent text-sm font-bold text-indigo-700 hover:bg-indigo-50 focus:bg-indigo-50 focus:text-indigo-900 outline-none transition-all pr-5 pl-2 ${NO_SPINNER_CLASS}`} placeholder="0" />
+                                                    <span className="absolute right-5 z-10 text-indigo-400 text-[10px] pointer-events-none font-bold">€</span>
+                                                    <input type="number" min="0" step="0.5" value={rate === 0 ? '' : rate} onChange={(e) => { const val = e.target.value === '' ? 0 : parseFloat(e.target.value); setEmployees(prev => prev.map(ev => ev.id === emp.id ? { ...ev, hourlyRate: val } : ev)); }} className={`w-full h-full text-center bg-transparent text-sm font-bold text-indigo-700 hover:bg-indigo-50 focus:bg-indigo-50 focus:text-indigo-900 outline-none transition-all px-6 ${NO_SPINNER_CLASS}`} placeholder="0" />
                                                 </div>
                                             </td>
 
@@ -1913,8 +1913,8 @@ export const MonthlySheet: React.FC<Props> = ({ userId, employees, sites, setEmp
                                             <td className={`p-0 border-gray-200 text-center relative group/target ${COL_W_TARGET}`}>
                                                 <div className="relative flex items-center h-full w-full">
                                                     <button onClick={() => handleUpdateMonthlySalaryMode(emp.id)} className={`absolute right-1 z-10 text-[9px] font-black w-4 h-4 flex items-center justify-center rounded cursor-pointer transition-all select-none border ${targetMode === 'NET' ? 'bg-cyan-50 text-cyan-600 border-cyan-200 hover:bg-cyan-100' : 'bg-orange-50 text-orange-600 border-orange-200 hover:bg-orange-100'}`} title={targetMode === 'NET' ? 'Passa a Lordo' : 'Passa a Netto'}>{targetMode === 'NET' ? 'N' : 'L'}</button>
-                                                    <span className="absolute right-6 z-10 text-cyan-600 text-[10px] pointer-events-none font-bold opacity-80">€</span>
-                                                    <input type="number" min="0" step="10" value={target === 0 ? '' : target} onChange={(e) => { const val = e.target.value === '' ? 0 : parseFloat(e.target.value); handleUpdateMonthlySalary(emp.id, val); }} className={`w-full h-full text-center bg-transparent text-sm font-bold text-cyan-900 hover:bg-cyan-50 focus:bg-cyan-50 outline-none focus:border-cyan-500 transition-all pr-8 pl-1 ${NO_SPINNER_CLASS}`} placeholder="0" />
+                                                    <span className="absolute right-7 z-10 text-cyan-500 text-[10px] pointer-events-none font-bold opacity-90">€</span>
+                                                    <input type="number" min="0" step="10" value={target === 0 ? '' : target} onChange={(e) => { const val = e.target.value === '' ? 0 : parseFloat(e.target.value); handleUpdateMonthlySalary(emp.id, val); }} className={`w-full h-full text-center bg-transparent text-sm font-bold text-cyan-900 hover:bg-cyan-50 focus:bg-cyan-50 outline-none focus:border-cyan-500 transition-all px-8 ${NO_SPINNER_CLASS}`} placeholder="0" />
                                                 </div>
                                             </td>
 
