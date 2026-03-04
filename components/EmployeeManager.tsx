@@ -885,25 +885,18 @@ export const EmployeeManager: React.FC<Props> = ({ employees, sites, setEmployee
 
                                         {isEditing ? (
                                             <div className="flex gap-2 flex-1 max-w-md animate-fade-in" onClick={(e) => e.stopPropagation()}>
-                                                <input type="text" value={editFirstName} onChange={(e) => setEditFirstName(e.target.value)} className="flex-1 px-3 py-2 rounded-lg text-black bg-white outline-none border-2 border-blue-200 focus:border-[#004aad]" placeholder="Nome" autoFocus />
-                                                <input type="text" value={editLastName} onChange={(e) => setEditLastName(e.target.value)} className="flex-1 px-3 py-2 rounded-lg text-black bg-white outline-none border-2 border-blue-200 focus:border-[#004aad]" placeholder="Cognome" />
+                                                <input type="text" value={editFirstName} onChange={(e) => setEditFirstName(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') saveEdit(emp.id); if (e.key === 'Escape') cancelEdit(); }} className="flex-1 px-3 py-2 rounded-lg text-black bg-white outline-none border-2 border-blue-200 focus:border-[#004aad]" placeholder="Nome" autoFocus />
+                                                <input type="text" value={editLastName} onChange={(e) => setEditLastName(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') saveEdit(emp.id); if (e.key === 'Escape') cancelEdit(); }} className="flex-1 px-3 py-2 rounded-lg text-black bg-white outline-none border-2 border-blue-200 focus:border-[#004aad]" placeholder="Cognome" />
                                             </div>
                                         ) : (
                                             <>
-                                                {/* Mobile/tablet: stacked layout (originale) */}
+                                                {/* Mobile/tablet: stacked layout — importo € nascosto per evitare sovrapposizione con le icone */}
                                                 <div className="flex flex-col lg:hidden">
                                                     <h3 className="font-bold text-gray-800 text-sm leading-tight group-hover:text-[#004aad] transition-colors">{emp.firstName} {emp.lastName}</h3>
-                                                    <div className="flex items-center gap-3">
-                                                        <span className="text-xs font-medium text-gray-400 uppercase tracking-wider flex items-center gap-1">
-                                                            <Clock className="w-3 h-3" /> Contratto:
-                                                            <span className={`font-bold px-1.5 py-0.5 rounded ${isOpen ? 'bg-[#ffec09] text-black' : 'bg-gray-100 text-gray-600'}`}>{totalContractHours}h</span>
-                                                        </span>
-                                                        {totalEuroDifference !== 0 && (
-                                                            <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${totalEuroDifference > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'}`}>
-                                                                {totalEuroDifference > 0 ? '+' : ''}{totalEuroDifference.toFixed(2)}€
-                                                            </span>
-                                                        )}
-                                                    </div>
+                                                    <span className="text-xs font-medium text-gray-400 uppercase tracking-wider flex items-center gap-1">
+                                                        <Clock className="w-3 h-3" /> Contratto:
+                                                        <span className={`font-bold px-1.5 py-0.5 rounded ${isOpen ? 'bg-[#ffec09] text-black' : 'bg-gray-100 text-gray-600'}`}>{totalContractHours}h</span>
+                                                    </span>
                                                 </div>
 
                                                 {/* Desktop: full-width horizontal layout */}

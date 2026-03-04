@@ -560,8 +560,8 @@ export const SiteManager: React.FC<Props> = ({ sites, setSites, employees, setEm
                                 const realIndex = isJolly ? 0 : filteredSites.filter((s, i) => i < index && !s.name.startsWith('CLEAN.ING')).length + 1;
                                 return (
                                     <div className={`text-xs font-black w-7 text-center hidden md:flex items-center justify-center rounded-md h-7 transition-colors ${isJolly
-                                            ? 'text-blue-400 bg-blue-50 group-hover:text-[#004aad] group-hover:bg-blue-100'
-                                            : 'text-gray-300 bg-gray-50 group-hover:text-[#004aad] group-hover:bg-blue-50'
+                                        ? 'text-blue-400 bg-blue-50 group-hover:text-[#004aad] group-hover:bg-blue-100'
+                                        : 'text-gray-300 bg-gray-50 group-hover:text-[#004aad] group-hover:bg-blue-50'
                                         }`}>
                                         {realIndex}
                                     </div>
@@ -576,6 +576,7 @@ export const SiteManager: React.FC<Props> = ({ sites, setSites, employees, setEm
                                             type="text"
                                             value={editName}
                                             onChange={(e) => setEditName(e.target.value)}
+                                            onKeyDown={(e) => { if (e.key === 'Enter') saveEdit(); if (e.key === 'Escape') cancelEdit(); }}
                                             placeholder="Nome Cantiere"
                                             className="p-2 border-2 border-[#004aad] rounded-lg bg-white text-gray-900 outline-none text-sm font-bold focus:shadow-md w-full"
                                             autoFocus
@@ -584,6 +585,7 @@ export const SiteManager: React.FC<Props> = ({ sites, setSites, employees, setEm
                                             type="text"
                                             value={editAddress}
                                             onChange={(e) => setEditAddress(e.target.value)}
+                                            onKeyDown={(e) => { if (e.key === 'Enter') saveEdit(); if (e.key === 'Escape') cancelEdit(); }}
                                             placeholder="Indirizzo"
                                             className="p-2 border border-gray-300 rounded-lg bg-white text-gray-900 outline-none text-sm focus:border-[#004aad] focus:ring-1 focus:ring-[#004aad] w-full"
                                         />
@@ -591,6 +593,7 @@ export const SiteManager: React.FC<Props> = ({ sites, setSites, employees, setEm
                                             type="text"
                                             value={editCity}
                                             onChange={(e) => setEditCity(e.target.value)}
+                                            onKeyDown={(e) => { if (e.key === 'Enter') saveEdit(); if (e.key === 'Escape') cancelEdit(); }}
                                             placeholder="Città"
                                             className="p-2 border border-gray-300 rounded-lg bg-white text-gray-900 outline-none text-sm focus:border-[#004aad] focus:ring-1 focus:ring-[#004aad] w-full"
                                         />
@@ -603,6 +606,7 @@ export const SiteManager: React.FC<Props> = ({ sites, setSites, employees, setEm
                                                 step="0.01"
                                                 value={editNetMonthlyRevenue}
                                                 onChange={(e) => setEditNetMonthlyRevenue(e.target.value)}
+                                                onKeyDown={(e) => { if (e.key === 'Enter') saveEdit(); if (e.key === 'Escape') cancelEdit(); }}
                                                 placeholder="Fatturato"
                                                 className="w-full pl-6 p-2 border border-gray-300 rounded-lg bg-white text-gray-900 outline-none text-sm focus:border-[#004aad] focus:ring-1 focus:ring-[#004aad]"
                                             />
