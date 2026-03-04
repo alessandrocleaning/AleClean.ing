@@ -813,8 +813,12 @@ export const EmployeeManager: React.FC<Props> = ({ employees, sites, setEmployee
                         const isEditing = editingEmpId === emp.id;
                         const isDraggable = !isOpen && !isEditing && !employeeSearchTerm;
                         const assignments = emp.defaultAssignments || [];
+                        const todayForFilter = new Date().toISOString().split('T')[0];
 
-                        const activeAssignments = assignments.filter(a => !a.archived);
+                        const activeAssignments = assignments.filter(a =>
+                            !a.archived &&
+                            !(a.endDate && a.endDate < todayForFilter)
+                        );
 
                         const visibleAssignments = assignments
                             .map((a, i) => ({ ...a, originalIndex: i }))
