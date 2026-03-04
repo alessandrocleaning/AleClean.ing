@@ -714,14 +714,35 @@ export const MonthlyAllowanceSheet: React.FC<Props> = ({ userId, employees }) =>
                     const h = data.cell.height;
                     const midY = y + h / 2;
 
-                    // 1. Background for both halves: match the row's actual background
-                    const rowFill = data.cell.styles.fillColor as number[] | undefined;
-                    if (Array.isArray(rowFill) && rowFill.length >= 3) {
-                        doc.setFillColor(rowFill[0], rowFill[1], rowFill[2]);
+                    // Detect if this is a calendar day column (not the P/S summary column at the end)
+                    const headerText = Array.isArray(data.column.raw) ? data.column.raw.join(' ') : (data.column.raw ? String(data.column.raw) : '');
+                    const isSummaryColumn = headerText.includes('P / S') || (data.column.index > 31 && !headerText.match(/\d/));
+
+                    // 1. Background
+                    if (isSummaryColumn) {
+                        // Summary column: match row background for both halves
+                        const rowFill = data.cell.styles.fillColor as number[] | undefined;
+                        if (Array.isArray(rowFill) && rowFill.length >= 3) {
+                            doc.setFillColor(rowFill[0], rowFill[1], rowFill[2]);
+                        } else {
+                            doc.setFillColor(255, 255, 255);
+                        }
+                        doc.rect(x, y, w, h, 'F');
                     } else {
-                        doc.setFillColor(255, 255, 255);
+                        // Day column: Top half matches row background
+                        const rowFill = data.cell.styles.fillColor as number[] | undefined;
+                        if (Array.isArray(rowFill) && rowFill.length >= 3) {
+                            doc.setFillColor(rowFill[0], rowFill[1], rowFill[2]);
+                        } else {
+                            doc.setFillColor(255, 255, 255);
+                        }
+                        doc.rect(x, y, w, h / 2, 'F');
+
+                        // Bottom half: colored background
+                        if (hasPermit) doc.setFillColor(237, 233, 254);
+                        else doc.setFillColor(255, 237, 213);
+                        doc.rect(x, midY, w, h / 2 + 0.5, 'F');
                     }
-                    doc.rect(x, y, w, h, 'F');
 
                     // 2. Horizontal divider line
                     doc.setDrawColor(200, 200, 200);

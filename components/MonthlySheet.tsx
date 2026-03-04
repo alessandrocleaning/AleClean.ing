@@ -1464,14 +1464,39 @@ export const MonthlySheet: React.FC<Props> = ({ userId, employees, sites, setEmp
                     const h = data.cell.height;
                     const midY = y + h / 2;
 
-                    // 1. Background for both halves: match the row's actual background (alternating or white)
-                    const rowFill = data.cell.styles.fillColor as number[] | undefined;
-                    if (Array.isArray(rowFill) && rowFill.length >= 3) {
-                        doc.setFillColor(rowFill[0], rowFill[1], rowFill[2]);
+                    // Detect if this is a calendar day column (not the P/S summary column at the end)
+                    // The P/S summary column is index `daysInMonth + 2` or `daysInMonth + 3`,
+                    // day columns are typically index 1 to daysInMonth.
+                    // A safe heuristic: check if the column header is a day number (e.g., "1 D", "2 L", etc.)
+                    const isDayColumn = data.column.index > 0 && data.column.index <= (doc as any).internal.getNumberOfPages() * 35; // Rough check, better check text
+                    const headerText = Array.isArray(data.column.raw) ? data.column.raw.join(' ') : (data.column.raw ? String(data.column.raw) : '');
+                    const isSummaryColumn = headerText.includes('P / S') || (data.column.index > 31 && !headerText.match(/\d/));
+
+                    // 1. Background
+                    if (isSummaryColumn) {
+                        // Summary column: match row background for both halves
+                        const rowFill = data.cell.styles.fillColor as number[] | undefined;
+                        if (Array.isArray(rowFill) && rowFill.length >= 3) {
+                            doc.setFillColor(rowFill[0], rowFill[1], rowFill[2]);
+                        } else {
+                            doc.setFillColor(255, 255, 255);
+                        }
+                        doc.rect(x, y, w, h, 'F');
                     } else {
-                        doc.setFillColor(255, 255, 255);
+                        // Day column: Top half matches row background
+                        const rowFill = data.cell.styles.fillColor as number[] | undefined;
+                        if (Array.isArray(rowFill) && rowFill.length >= 3) {
+                            doc.setFillColor(rowFill[0], rowFill[1], rowFill[2]);
+                        } else {
+                            doc.setFillColor(255, 255, 255);
+                        }
+                        doc.rect(x, y, w, h / 2, 'F');
+
+                        // Bottom half: colored background (permit=violet, overtime=orange)
+                        if (hasPermit) doc.setFillColor(237, 233, 254); // violet-100
+                        else doc.setFillColor(255, 237, 213);           // orange-100
+                        doc.rect(x, midY, w, h / 2 + 0.5, 'F');
                     }
-                    doc.rect(x, y, w, h, 'F');
 
                     // 2. Horizontal divider line
                     doc.setDrawColor(200, 200, 200);
