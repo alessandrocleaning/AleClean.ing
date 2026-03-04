@@ -610,6 +610,7 @@ const DayInputCell = React.memo(({ empId, dayNum, data, calculatedStandardHours,
                             const val = e.target.value === '' ? 0 : parseFloat(e.target.value);
                             onInteract(empId, dayNum, currentType, val);
                         }}
+                        onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
                         onClick={(e) => e.stopPropagation()}
                         className={`w-full h-full text-center bg-transparent outline-none text-sm font-bold text-purple-900 ${NO_SPINNER_CLASS}`}
                         placeholder="0"
@@ -639,6 +640,7 @@ const DayInputCell = React.memo(({ empId, dayNum, data, calculatedStandardHours,
                             const val = e.target.value === '' ? 0 : parseFloat(e.target.value);
                             onInteract(empId, dayNum, currentType, val);
                         }}
+                        onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
                         onClick={(e) => e.stopPropagation()}
                         className={`w-full h-full text-center bg-transparent outline-none text-sm font-bold text-orange-900 ${NO_SPINNER_CLASS}`}
                         placeholder="0"
@@ -698,6 +700,7 @@ const DayInputCell = React.memo(({ empId, dayNum, data, calculatedStandardHours,
                     step="0.5"
                     value={displayValue === 0 ? '' : displayValue}
                     onChange={(e) => handleInputChange(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
                     onClick={handleInputClick}
                     className={`w-full h-full text-center bg-transparent outline-none p-0 m-0 text-gray-800 ${displayValue > 0 ? 'font-bold text-base' : 'text-sm'} ${NO_SPINNER_CLASS}`}
                     placeholder={currentType === 'PERMESSO' || currentType === 'STRAORDINARIO' ? 'Ore' : ''}
