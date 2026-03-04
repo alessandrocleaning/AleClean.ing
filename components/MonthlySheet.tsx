@@ -1944,8 +1944,24 @@ export const MonthlySheet: React.FC<Props> = ({ userId, employees, sites, setEmp
                                             {/* Totale */}
                                             <td className={`p-3 border-l border-gray-200 text-center font-black text-gray-800 ${COL_W_HOUR}`}>{totalWork}</td>
 
-                                            {/* Contratto (ore effettivamente lavorate, al netto di ferie/assenze) */}
-                                            <td className={`p-3 border-gray-200 text-center font-bold text-gray-600 ${COL_W_HOUR}`}>{effectiveHoursForDiff}</td>
+                                            {/* Contratto = importo Tot. Cedolini (target € ridotto proporzionalmente per assenze) */}
+                                            {(() => {
+                                                const contractPay = target > 0 && totalContract > 0
+                                                    ? Math.round((target * (effectiveHoursForDiff / totalContract)) * 100) / 100
+                                                    : target;
+                                                return (
+                                                    <td className={`p-2 border-gray-200 text-center ${COL_W_HOUR}`}>
+                                                        {target > 0 ? (
+                                                            <div className="flex flex-col items-center gap-0.5">
+                                                                <span className={`text-xs font-bold px-1 py-0.5 rounded ${targetMode === 'NET' ? 'text-cyan-600 bg-cyan-50' : 'text-orange-600 bg-orange-50'}`}>
+                                                                    {targetMode === 'NET' ? 'N' : 'L'}
+                                                                </span>
+                                                                <span className="text-sm font-black text-gray-800">{contractPay.toLocaleString('it-IT')} €</span>
+                                                            </div>
+                                                        ) : <span className="text-gray-300 text-xs">—</span>}
+                                                    </td>
+                                                );
+                                            })()}
 
                                             {/* Differenza (Badge Style) */}
                                             <td className={`p-2 border-l border-gray-100 text-center align-middle ${COL_W_HOUR}`}>
