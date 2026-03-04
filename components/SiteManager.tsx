@@ -634,46 +634,53 @@ export const SiteManager: React.FC<Props> = ({ sites, setSites, employees, setEm
                                             Riga 2 (right): Fatturato | #Op | ✏️ | 🗑️
                                         ══════════════════════════════════════════ */}
                                         <div className="flex flex-col gap-1 w-full min-w-0 md:hidden">
-                                            {/* RIGA 1 — Nome */}
-                                            <div className="flex items-start gap-1.5">
-                                                <span className="w-2 h-2 rounded-full bg-[#004aad] flex-shrink-0 mt-1.5"></span>
+                                            {/* RIGA 1 — Nome centrato col pallino */}
+                                            <div className="flex items-center gap-1.5">
+                                                <span className="w-2 h-2 rounded-full bg-[#004aad] flex-shrink-0"></span>
                                                 <span className="font-bold text-gray-800 text-sm leading-snug">{site.name}</span>
                                             </div>
 
-                                            {/* RIGA 2 — Azioni allineate a destra */}
-                                            <div className="flex items-center justify-end gap-1.5">
-                                                {/* FATTURATO */}
-                                                {site.netMonthlyRevenue !== undefined && (
-                                                    <div className="flex items-center gap-0.5 text-[11px] font-bold text-[#004aad] bg-blue-50 px-1.5 py-0.5 rounded border border-blue-100 whitespace-nowrap">
-                                                        <Euro className="w-3 h-3" />
-                                                        <span>{site.netMonthlyRevenue.toLocaleString('it-IT', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}€</span>
-                                                    </div>
-                                                )}
-                                                {/* OPERATORI */}
-                                                {(() => {
-                                                    const n = employees.filter(e => e.defaultAssignments.some(a => a.siteId === site.id)).length;
-                                                    if (n === 0) return null;
-                                                    return (
-                                                        <div className="w-5 h-5 rounded-full bg-indigo-100 text-[#004aad] font-bold text-[9px] flex items-center justify-center border border-indigo-200">
-                                                            {n}
+                                            {/* RIGA 2 — Categoria a sinistra, azioni a destra */}
+                                            <div className="flex items-center justify-between gap-1.5 min-w-0">
+                                                {/* CATEGORIA (sinistra, troncata se occupa troppo spazio) */}
+                                                {site.category ? (
+                                                    <span className={`inline-flex px-1.5 py-0.5 rounded text-[9px] uppercase tracking-wide font-extrabold border truncate max-w-[70px] ${CATEGORY_COLORS[site.category].bg} ${CATEGORY_COLORS[site.category].text} ${CATEGORY_COLORS[site.category].border}`}>
+                                                        {site.category}
+                                                    </span>
+                                                ) : <div />}
+
+                                                {/* FATTURATO + OPERATORI + BOTTONI (destra) */}
+                                                <div className="flex items-center gap-1.5 flex-shrink-0">
+                                                    {site.netMonthlyRevenue !== undefined && (
+                                                        <div className="flex items-center gap-0.5 text-[11px] font-bold text-[#004aad] bg-blue-50 px-1.5 py-0.5 rounded border border-blue-100 whitespace-nowrap">
+                                                            <Euro className="w-3 h-3" />
+                                                            <span>{site.netMonthlyRevenue.toLocaleString('it-IT', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}€</span>
                                                         </div>
-                                                    );
-                                                })()}
-                                                {/* BOTTONI AZIONE (solo su mobile) */}
-                                                <button
-                                                    onClick={() => startEditing(site)}
-                                                    className="p-1.5 text-gray-400 hover:text-[#004aad] hover:bg-blue-50 rounded-lg transition-colors"
-                                                    title="Modifica"
-                                                >
-                                                    <Pencil className="w-3.5 h-3.5" />
-                                                </button>
-                                                <button
-                                                    onClick={(e) => { e.stopPropagation(); setDeleteId(site.id); }}
-                                                    className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                                                    title="Elimina"
-                                                >
-                                                    <Trash2 className="w-3.5 h-3.5" />
-                                                </button>
+                                                    )}
+                                                    {(() => {
+                                                        const n = employees.filter(e => e.defaultAssignments.some(a => a.siteId === site.id)).length;
+                                                        if (n === 0) return null;
+                                                        return (
+                                                            <div className="w-5 h-5 rounded-full bg-indigo-100 text-[#004aad] font-bold text-[9px] flex items-center justify-center border border-indigo-200">
+                                                                {n}
+                                                            </div>
+                                                        );
+                                                    })()}
+                                                    <button
+                                                        onClick={() => startEditing(site)}
+                                                        className="p-1.5 text-gray-400 hover:text-[#004aad] hover:bg-blue-50 rounded-lg transition-colors"
+                                                        title="Modifica"
+                                                    >
+                                                        <Pencil className="w-3.5 h-3.5" />
+                                                    </button>
+                                                    <button
+                                                        onClick={(e) => { e.stopPropagation(); setDeleteId(site.id); }}
+                                                        className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                                                        title="Elimina"
+                                                    >
+                                                        <Trash2 className="w-3.5 h-3.5" />
+                                                    </button>
+                                                </div>
                                             </div>
                                         </div>
 
