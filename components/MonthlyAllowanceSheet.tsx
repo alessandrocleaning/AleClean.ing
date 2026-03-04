@@ -19,8 +19,8 @@ import { loadMonthlyData, saveMonthlyData } from '../lib/firestore';
 const STORAGE_PREFIX = 'cleaning_sheet_';
 const NO_SPINNER_CLASS = "[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none";
 
-// Column Widths matching MonthlySheet for consistency
-const COL_W_TARGET = "w-[120px] min-w-[120px]";
+// --- STYLING CONSTANTS FOR COLUMNS ---
+const COL_W_TARGET = "w-[85px] min-w-[85px]";
 // Reduced from 110px to 85px as requested
 const COL_W_MONEY = "w-[85px] min-w-[85px]";
 
@@ -960,7 +960,12 @@ export const MonthlyAllowanceSheet: React.FC<Props> = ({ userId, employees }) =>
                                 <th className={`${SUMMARY_HEADER_CLASS} w-[80px] min-w-[80px] bg-green-800`}>P / S</th>
 
                                 {/* ADDED COLUMNS */}
-                                <th className={`${SUMMARY_HEADER_CLASS} ${COL_W_TARGET} bg-cyan-600 border-l border-white/10`}>Netto/Lordo</th>
+                                <th className={`${SUMMARY_HEADER_CLASS} ${COL_W_TARGET} bg-cyan-600 border-l border-white/10 p-0`}>
+                                    <div className="flex flex-col items-center justify-center leading-none py-1">
+                                        <span>NETTO</span>
+                                        <span className="text-[9px] text-cyan-200 mt-1 pt-0.5 border-t border-cyan-500/50 w-[80%] text-center">LORDO</span>
+                                    </div>
+                                </th>
                                 <th className={`${SUMMARY_HEADER_CLASS} ${COL_W_MONEY} bg-blue-500 border-l border-white/10`}>Trasferta</th>
                                 <th className={`${SUMMARY_HEADER_CLASS} ${COL_W_MONEY} bg-orange-500`}>Benzina</th>
                                 <th className={`${SUMMARY_HEADER_CLASS} ${COL_W_MONEY} bg-purple-500`}>Spese</th>
@@ -1132,34 +1137,11 @@ export const MonthlyAllowanceSheet: React.FC<Props> = ({ userId, employees }) =>
 
                                             {/* --- NEW COLUMNS --- */}
                                             {/* NETTO/LORDO */}
-                                            <td className={`p-1 border-b border-gray-200 text-center relative group/target ${COL_W_TARGET} border-l border-gray-100`}>
-                                                <div className="flex flex-col items-center justify-center h-full w-full gap-1 py-1">
-                                                    <div className="relative w-full px-2">
-                                                        <input
-                                                            type="number"
-                                                            min="0"
-                                                            step="10"
-                                                            value={target === 0 ? '' : target}
-                                                            onChange={(e) => { const val = e.target.value === '' ? 0 : parseFloat(e.target.value); handleUpdateMonthlySalary(emp.id, val); }}
-                                                            className={`w-full text-center bg-transparent text-sm font-bold text-cyan-900 outline-none border-b border-gray-200 focus:border-cyan-500 transition-all pb-0.5 ${NO_SPINNER_CLASS}`}
-                                                            placeholder="0"
-                                                        />
-                                                        <span className="absolute right-0 top-0 text-cyan-300 text-[9px] pointer-events-none opacity-0 group-hover/target:opacity-100 font-bold">€</span>
-                                                    </div>
-
-                                                    <button
-                                                        onClick={() => handleUpdateMonthlySalaryMode(emp.id)}
-                                                        className={`
-                                                  text-[9px] font-bold uppercase tracking-wide px-2 py-[2px] rounded cursor-pointer transition-all select-none border w-16
-                                                  ${targetMode === 'NET'
-                                                                ? 'bg-cyan-50 text-cyan-600 border-cyan-200 hover:bg-cyan-100'
-                                                                : 'bg-orange-50 text-orange-600 border-orange-200 hover:bg-orange-100'
-                                                            }
-                                              `}
-                                                        title="Clicca per cambiare solo per questo mese"
-                                                    >
-                                                        {targetMode === 'NET' ? 'Netto' : 'Lordo'}
-                                                    </button>
+                                            <td className={`p-0 border-b border-gray-200 text-center relative group/target ${COL_W_TARGET} border-l border-gray-100`}>
+                                                <div className="relative flex items-center h-full w-full">
+                                                    <button onClick={() => handleUpdateMonthlySalaryMode(emp.id)} className={`absolute right-1 z-10 text-[9px] font-black w-4 h-4 flex items-center justify-center rounded cursor-pointer transition-all select-none border ${targetMode === 'NET' ? 'bg-cyan-50 text-cyan-600 border-cyan-200 hover:bg-cyan-100' : 'bg-orange-50 text-orange-600 border-orange-200 hover:bg-orange-100'}`} title={targetMode === 'NET' ? 'Passa a Lordo' : 'Passa a Netto'}>{targetMode === 'NET' ? 'N' : 'L'}</button>
+                                                    <span className="absolute right-6 z-10 text-cyan-600 text-[10px] pointer-events-none font-bold opacity-80">€</span>
+                                                    <input type="number" min="0" step="10" value={target === 0 ? '' : target} onChange={(e) => { const val = e.target.value === '' ? 0 : parseFloat(e.target.value); handleUpdateMonthlySalary(emp.id, val); }} className={`w-full h-full text-center bg-transparent text-sm font-bold text-cyan-900 hover:bg-cyan-50 focus:bg-cyan-50 outline-none focus:border-cyan-500 transition-all ${NO_SPINNER_CLASS}`} placeholder="0" />
                                                 </div>
                                             </td>
 
