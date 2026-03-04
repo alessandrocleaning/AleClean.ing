@@ -726,7 +726,7 @@ DayInputCell.displayName = 'DayInputCell';
 
 const getDayKey = (dayIndex: number): DayKey => {
     const map: Record<number, DayKey> = {
-        0: 'sun', 1: 'tue', 2: 'wed', 3: 'wed', 4: 'thu', 5: 'fri', 6: 'sat'
+        0: 'sun', 1: 'mon', 2: 'tue', 3: 'wed', 4: 'thu', 5: 'fri', 6: 'sat'
     };
     return map[dayIndex];
 };
