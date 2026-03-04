@@ -14,7 +14,7 @@ import {
     Unsubscribe,
 } from 'firebase/firestore';
 import { db } from './firebase';
-import { Employee, Site, MonthlyData } from '../types';
+import { Employee, Site, MonthlyData, ExtraJob } from '../types';
 
 // ─── EMAIL ACCOUNT PRINCIPALE ────────────────────────────────────────────────
 export const ADMIN_EMAIL = 'alessandro.clean.ing@gmail.com';
@@ -131,6 +131,19 @@ export const saveMonthlyData = async (
     await setDoc(doc(db, 'users', userId, 'monthly', monthKey), data);
 };
 
+// ─── RECURRING EXTRA JOBS ──────────────────────────────────────────────────
+
+export const loadRecurringJobs = async (userId: string): Promise<Record<string, ExtraJob[]>> => {
+    const snap = await getDoc(doc(db, 'users', userId, 'data', 'recurringJobs'));
+    if (!snap.exists()) return {};
+    const data = snap.data();
+    return (data?.jobs as Record<string, ExtraJob[]>) || {};
+};
+
+export const saveRecurringJobs = async (userId: string, jobs: Record<string, ExtraJob[]>): Promise<void> => {
+    await setDoc(doc(db, 'users', userId, 'data', 'recurringJobs'), { jobs });
+};
+
 // ─── MIGRATION: LocalStorage → Firestore ──────────────────────────────────
 
 /**
@@ -155,11 +168,11 @@ export const migrateFromLocalStorage = async (userId: string): Promise<boolean> 
             migrated = true;
         }
 
-        // Migra i dati mensili (chiavi come "cleaning_monthly_YYYY-MM")
+        // Migra i dati mensili (chiavi come "cleaning_sheet_YYYY-MM")
         for (let i = 0; i < localStorage.length; i++) {
             const key = localStorage.key(i);
-            if (key && key.startsWith('cleaning_monthly_')) {
-                const monthKey = key.replace('cleaning_monthly_', '');
+            if (key && key.startsWith('cleaning_sheet_')) {
+                const monthKey = key.replace('cleaning_sheet_', '');
                 const raw = localStorage.getItem(key);
                 if (raw) {
                     const data = JSON.parse(raw) as MonthlyData;
@@ -167,6 +180,14 @@ export const migrateFromLocalStorage = async (userId: string): Promise<boolean> 
                     migrated = true;
                 }
             }
+        }
+
+        // Migra i recurring jobs globali ("cleaning_recurring_extra_jobs")
+        const rawRecurring = localStorage.getItem('cleaning_recurring_extra_jobs');
+        if (rawRecurring) {
+            const jobs = JSON.parse(rawRecurring) as Record<string, ExtraJob[]>;
+            await saveRecurringJobs(userId, jobs);
+            migrated = true;
         }
 
         return migrated;

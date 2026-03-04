@@ -875,6 +875,7 @@ const App: React.FC<{ user: User; isAdmin: boolean }> = ({ user, isAdmin }) => {
           {/* VIEW: GENERATOR */}
           {view === 'generator' && (
             <MonthlySheet
+              userId={user.uid}
               employees={employees}
               sites={sites}
               setEmployees={setEmployees}
@@ -884,6 +885,7 @@ const App: React.FC<{ user: User; isAdmin: boolean }> = ({ user, isAdmin }) => {
           {/* VIEW: ALLOWANCES */}
           {view === 'allowances' && (
             <MonthlyAllowanceSheet
+              userId={user.uid}
               employees={employees}
               sites={sites}
             />

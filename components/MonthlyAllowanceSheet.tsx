@@ -8,9 +8,12 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
 interface Props {
+    userId: string;
     employees: Employee[];
     sites: Site[];
 }
+
+import { loadMonthlyData, saveMonthlyData } from '../lib/firestore';
 
 // --- CONSTANTS ---
 const STORAGE_PREFIX = 'cleaning_sheet_';
@@ -248,7 +251,7 @@ const getDayKey = (dayIndex: number): DayKey => {
     return map[dayIndex];
 };
 
-export const MonthlyAllowanceSheet: React.FC<Props> = ({ employees }) => {
+export const MonthlyAllowanceSheet: React.FC<Props> = ({ userId, employees }) => {
     // Use Date object state instead of string
     const [currentDate, setCurrentDate] = useState<Date>(new Date());
 
@@ -274,38 +277,43 @@ export const MonthlyAllowanceSheet: React.FC<Props> = ({ employees }) => {
 
     // --- PERSISTENCE: LOAD ---
     useEffect(() => {
-        setIsGenerating(true);
-        const key = `${STORAGE_PREFIX}${storageKeyRaw}`;
-        const saved = localStorage.getItem(key);
-
-        if (saved) {
+        let isMounted = true;
+        const loadData = async () => {
+            if (isMounted) setIsGenerating(true);
             try {
-                const parsed = JSON.parse(saved);
-                // Ensure all fields exist
-                if (!parsed.splits) parsed.splits = {};
-                if (!parsed.extraJobs) parsed.extraJobs = {};
-                if (!parsed.salaryTarget) parsed.salaryTarget = {};
-                if (!parsed.salaryMode) parsed.salaryMode = {};
-                setMonthlyData(parsed);
+                const fetchedData = await loadMonthlyData(userId, storageKeyRaw);
+                if (isMounted) {
+                    if (fetchedData) {
+                        if (!fetchedData.splits) fetchedData.splits = {};
+                        if (!fetchedData.extraJobs) fetchedData.extraJobs = {};
+                        if (!fetchedData.salaryTarget) fetchedData.salaryTarget = {};
+                        if (!fetchedData.salaryMode) fetchedData.salaryMode = {};
+                        setMonthlyData(fetchedData);
+                    } else {
+                        setMonthlyData({ overrides: {}, notes: {}, splits: {}, extraJobs: {}, salaryTarget: {}, salaryMode: {} });
+                    }
+                }
             } catch (e) {
-                console.error("Failed to parse monthly data", e);
-                setMonthlyData({ overrides: {}, notes: {}, splits: {}, extraJobs: {}, salaryTarget: {}, salaryMode: {} });
+                console.error("Failed to load monthly data", e);
+                if (isMounted) setMonthlyData({ overrides: {}, notes: {}, splits: {}, extraJobs: {}, salaryTarget: {}, salaryMode: {} });
+            } finally {
+                if (isMounted) setIsGenerating(false);
             }
-        } else {
-            setMonthlyData({ overrides: {}, notes: {}, splits: {}, extraJobs: {}, salaryTarget: {}, salaryMode: {} });
-        }
-
-        const timer = setTimeout(() => setIsGenerating(false), 300);
-        return () => clearTimeout(timer);
-    }, [storageKeyRaw]);
+        };
+        loadData();
+        return () => { isMounted = false; };
+    }, [userId, storageKeyRaw]);
 
     // --- PERSISTENCE: SAVE HELPER ---
     const saveToStorage = (newData: MonthlyData) => {
         setMonthlyData(newData);
         setSaveStatus('saving');
-        const key = `${STORAGE_PREFIX}${storageKeyRaw}`;
-        localStorage.setItem(key, JSON.stringify(newData));
-        setTimeout(() => setSaveStatus('saved'), 500);
+        saveMonthlyData(userId, storageKeyRaw, newData)
+            .then(() => setSaveStatus('saved'))
+            .catch(err => {
+                console.error("Errore salvataggio allowances:", err);
+                setSaveStatus('saved');
+            });
     };
 
     // --- MEMOIZED DATE LOGIC ---
