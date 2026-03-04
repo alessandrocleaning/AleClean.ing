@@ -628,57 +628,35 @@ export const SiteManager: React.FC<Props> = ({ sites, setSites, employees, setEm
                                 ) : (
                                     <div className="flex flex-col md:grid md:grid-cols-[1.5fr_1.5fr_1fr_1fr] lg:grid-cols-[2fr_1.5fr_120px_1fr_1fr] gap-2 md:gap-3 w-full items-start md:items-center min-w-0">
 
-                                        {/* SU MOBILE: RIGA 1 (Nome max esteso + Fatturato + Badge numerico Operatori) */}
-                                        <div className="flex items-start justify-between gap-2 w-full md:hidden min-w-0">
-                                            {/* NOME CANTIERE (priorità assoluta) */}
-                                            <div className="font-bold text-gray-800 text-sm flex items-start gap-2 flex-1 min-w-0">
-                                                <span className="w-2 h-2 rounded-full bg-[#004aad] flex-shrink-0 mt-1.5"></span>
-                                                <span className="leading-tight break-words min-w-0">{site.name}</span>
+                                        {/* ══════════════════════════════════════════
+                                            SU MOBILE: riga singola compatta
+                                            [Nome truncate] [Fatturato] [#Op] [✏️🗑️]
+                                        ══════════════════════════════════════════ */}
+                                        <div className="flex items-center gap-2 w-full min-w-0 md:hidden">
+                                            {/* NOME (occupa tutto lo spazio disponibile, troncato a 1 riga) */}
+                                            <div className="flex items-center gap-1.5 flex-1 min-w-0">
+                                                <span className="w-2 h-2 rounded-full bg-[#004aad] flex-shrink-0"></span>
+                                                <span className="font-bold text-gray-800 text-sm truncate">{site.name}</span>
                                             </div>
 
-                                            {/* FATTURATO E OPERATORI COMPATTATI */}
-                                            <div className="flex items-center gap-2 flex-shrink-0">
-                                                {/* FATTURATO (2° priorità) */}
-                                                {site.netMonthlyRevenue !== undefined && (
-                                                    <div className="flex items-center gap-1 text-[11px] font-bold text-[#004aad] bg-blue-50/50 px-1.5 py-0.5 rounded border border-blue-50 whitespace-nowrap">
-                                                        <Euro className="w-3 h-3" />
-                                                        <span>{site.netMonthlyRevenue.toLocaleString('it-IT', { style: 'currency', currency: 'EUR' })}</span>
-                                                    </div>
-                                                )}
-
-                                                {/* OPERATORI COMPATTATI IN UN NUMERO (3° priorità) */}
-                                                {(() => {
-                                                    const assignedEmp = employees.filter(e => e.defaultAssignments.some(a => a.siteId === site.id));
-                                                    if (assignedEmp.length === 0) return null;
-                                                    return (
-                                                        <div
-                                                            className="w-6 h-6 rounded-full bg-indigo-100 text-[#004aad] font-bold text-[10px] flex items-center justify-center border border-white shadow-sm ring-1 ring-[#004aad]/20 flex-shrink-0"
-                                                            title={`${assignedEmp.length} dipendenti assegnati`}
-                                                        >
-                                                            {assignedEmp.length}
-                                                        </div>
-                                                    );
-                                                })()}
-                                            </div>
-                                        </div>
-
-                                        {/* SU MOBILE: RIGA 2 (Categoria + Indirizzo visibile solo se c'è spazio sufficiente - flex-wrap) */}
-                                        <div className="flex flex-wrap items-center gap-2 md:hidden w-full min-w-0">
-                                            {/* CATEGORIA (4° priorità) */}
-                                            {site.category && (
-                                                <span className={`inline-flex px-1.5 py-0.5 rounded text-[10px] uppercase tracking-wider font-extrabold border ${CATEGORY_COLORS[site.category].bg} ${CATEGORY_COLORS[site.category].text} ${CATEGORY_COLORS[site.category].border} shrink-0`}>
-                                                    {site.category}
-                                                </span>
-                                            )}
-                                            {/* INDIRIZZO (5° priorità, truncato o nascosto) */}
-                                            {(site.address || site.city) && (
-                                                <div className="flex items-center gap-1 text-[11px] font-medium text-gray-500 bg-gray-50 px-1.5 py-0.5 rounded border border-gray-100 min-w-0 max-w-full hidden sm:flex">
-                                                    <Map className="w-3 h-3 text-gray-400 flex-shrink-0" />
-                                                    <span className="truncate">
-                                                        {site.address}{site.address && site.city ? ', ' : ''}{site.city}
-                                                    </span>
+                                            {/* FATTURATO */}
+                                            {site.netMonthlyRevenue !== undefined && (
+                                                <div className="flex items-center gap-0.5 text-[11px] font-bold text-[#004aad] bg-blue-50 px-1.5 py-0.5 rounded border border-blue-100 whitespace-nowrap flex-shrink-0">
+                                                    <Euro className="w-3 h-3" />
+                                                    <span>{site.netMonthlyRevenue.toLocaleString('it-IT', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}€</span>
                                                 </div>
                                             )}
+
+                                            {/* OPERATORI (numero) */}
+                                            {(() => {
+                                                const n = employees.filter(e => e.defaultAssignments.some(a => a.siteId === site.id)).length;
+                                                if (n === 0) return null;
+                                                return (
+                                                    <div className="w-5 h-5 rounded-full bg-indigo-100 text-[#004aad] font-bold text-[9px] flex items-center justify-center border border-indigo-200 flex-shrink-0">
+                                                        {n}
+                                                    </div>
+                                                );
+                                            })()}
                                         </div>
 
 
