@@ -938,85 +938,84 @@ export const MonthlySheet: React.FC<Props> = ({ userId, employees, sites, setEmp
     };
 
     const handleUpdateExtraJob = (empId: string, jobId: string, field: keyof ExtraJob | 'hour', value: any, dayNum?: number) => {
-        // Check if job is recurring
         const isRecurring = recurringJobs[empId]?.some(j => j.id === jobId);
 
+        // ── Helper: crea o aggiorna la copia locale mensile di un job ricorrente ──
+        const upsertLocalCopy = (
+            prev: MonthlyData,
+            applyFn: (job: ExtraJob) => ExtraJob
+        ): MonthlyData => {
+            const recurringJob = (recurringJobs[empId] || []).find(j => j.id === jobId);
+            if (!recurringJob) return prev;
+
+            const currentMonthlyExtras = prev.extraJobs?.[empId] || [];
+            const existingLocalCopy = currentMonthlyExtras.find(j => j.id === jobId);
+
+            let updatedExtras: ExtraJob[];
+            if (existingLocalCopy) {
+                updatedExtras = currentMonthlyExtras.map(j => j.id === jobId ? applyFn(j) : j);
+            } else {
+                // Prima modifica: partenza dal job ricorrente globale, già con isLocked: false
+                const localBase: ExtraJob = { ...recurringJob, isLocked: false, startMonth: undefined };
+                updatedExtras = [...currentMonthlyExtras, applyFn(localBase)];
+            }
+
+            return { ...prev, extraJobs: { ...prev.extraJobs, [empId]: updatedExtras } };
+        };
+
         if (isRecurring && field === 'hour' && dayNum !== undefined) {
-            // ── CASO SPECIALE: modifica delle ORE di un job ricorrente ──
-            // NON modifichiamo il job globale (che vale per tutti i mesi).
-            // Invece creiamo/aggiorniamo una copia locale per QUESTO mese in monthlyData.extraJobs.
+            // Modifica ore → copia locale per questo mese
             setMonthlyData(prev => {
-                const recurringJob = (recurringJobs[empId] || []).find(j => j.id === jobId);
-                if (!recurringJob) return prev;
-
-                const currentMonthlyExtras = prev.extraJobs?.[empId] || [];
-                // Cerchiamo se esiste già una copia locale per questo mese
-                const existingLocalCopy = currentMonthlyExtras.find(j => j.id === jobId);
-
-                let updatedExtras: ExtraJob[];
-                if (existingLocalCopy) {
-                    // Aggiorniamo la copia locale esistente
-                    updatedExtras = currentMonthlyExtras.map(job => {
-                        if (job.id !== jobId) return job;
-                        const newHours = { ...job.hours };
-                        if (value === 0 || value === '') delete newHours[dayNum];
-                        else newHours[dayNum] = parseFloat(value);
-                        return { ...job, hours: newHours };
-                    });
-                } else {
-                    // Prima modifica: creiamo una copia locale a partire dal job ricorrente
-                    // con le ore già presenti + la nuova modifica
-                    const newHours = { ...recurringJob.hours };
+                const newData = upsertLocalCopy(prev, job => {
+                    const newHours = { ...job.hours };
                     if (value === 0 || value === '') delete newHours[dayNum];
                     else newHours[dayNum] = parseFloat(value);
-                    const localCopy: ExtraJob = {
-                        ...recurringJob,
-                        hours: newHours,
-                        isLocked: false, // La copia locale NON è ricorrente (è già per questo mese)
-                        startMonth: undefined,
-                    };
-                    updatedExtras = [...currentMonthlyExtras, localCopy];
-                }
-
-                const newData = {
-                    ...prev,
-                    extraJobs: { ...prev.extraJobs, [empId]: updatedExtras }
-                };
+                    return { ...job, hours: newHours };
+                });
                 syncToCloud(storageKeyRaw, newData);
                 return newData;
             });
 
-        } else if (isRecurring) {
-            // Aggiorna il job ricorrente globale (solo description / value — non le ore)
+        } else if (isRecurring && field === 'value') {
+            // Modifica valore € → copia locale per questo mese
+            setMonthlyData(prev => {
+                const newData = upsertLocalCopy(prev, job => ({ ...job, value: parseFloat(value) || 0 }));
+                syncToCloud(storageKeyRaw, newData);
+                return newData;
+            });
+
+        } else if (isRecurring && field === 'description') {
+            // Descrizione → aggiorna il job globale (uguale per tutti i mesi)
             setRecurringJobs(prev => {
-                const currentExtras = prev[empId] || [];
-                const updatedExtras = currentExtras.map(job => {
-                    if (job.id !== jobId) return job;
-                    if (field === 'description') {
-                        return { ...job, description: value };
-                    } else if (field === 'value') {
-                        return { ...job, value: parseFloat(value) || 0 };
-                    }
-                    return job;
-                });
+                const updatedExtras = (prev[empId] || []).map(j =>
+                    j.id === jobId ? { ...j, description: value } : j
+                );
                 const newRecurring = { ...prev, [empId]: updatedExtras };
                 syncRecurringToCloud(newRecurring);
                 return newRecurring;
             });
-        } else {
-            // Update Monthly State (job non ricorrente)
+            // Aggiorna anche la copia locale mensile se esiste
+            setMonthlyData(prev => {
+                const monthlyExtras = prev.extraJobs?.[empId] || [];
+                if (!monthlyExtras.find(j => j.id === jobId)) return prev;
+                const updatedExtras = monthlyExtras.map(j =>
+                    j.id === jobId ? { ...j, description: value } : j
+                );
+                const newData = { ...prev, extraJobs: { ...prev.extraJobs, [empId]: updatedExtras } };
+                syncToCloud(storageKeyRaw, newData);
+                return newData;
+            });
+
+        } else if (!isRecurring) {
+            // Job non ricorrente → aggiorna monthlyData normalmente
             setMonthlyData(prev => {
                 const currentExtras = prev.extraJobs?.[empId] || [];
                 const updatedExtras = currentExtras.map(job => {
                     if (job.id !== jobId) return job;
-
                     if (field === 'hour' && dayNum !== undefined) {
                         const newHours = { ...job.hours };
-                        if (value === 0 || value === '') {
-                            delete newHours[dayNum];
-                        } else {
-                            newHours[dayNum] = parseFloat(value);
-                        }
+                        if (value === 0 || value === '') delete newHours[dayNum];
+                        else newHours[dayNum] = parseFloat(value);
                         return { ...job, hours: newHours };
                     } else if (field === 'description') {
                         return { ...job, description: value };
@@ -1025,11 +1024,7 @@ export const MonthlySheet: React.FC<Props> = ({ userId, employees, sites, setEmp
                     }
                     return job;
                 });
-
-                const newData = {
-                    ...prev,
-                    extraJobs: { ...prev.extraJobs, [empId]: updatedExtras }
-                };
+                const newData = { ...prev, extraJobs: { ...prev.extraJobs, [empId]: updatedExtras } };
                 syncToCloud(storageKeyRaw, newData);
                 return newData;
             });
@@ -1949,8 +1944,8 @@ export const MonthlySheet: React.FC<Props> = ({ userId, employees, sites, setEmp
                                             {/* Totale */}
                                             <td className={`p-3 border-l border-gray-200 text-center font-black text-gray-800 ${COL_W_HOUR}`}>{totalWork}</td>
 
-                                            {/* Contratto */}
-                                            <td className={`p-3 border-gray-200 text-center font-medium text-gray-400 ${COL_W_HOUR}`}>{totalContract}</td>
+                                            {/* Contratto (ore effettivamente lavorate, al netto di ferie/assenze) */}
+                                            <td className={`p-3 border-gray-200 text-center font-bold text-gray-600 ${COL_W_HOUR}`}>{effectiveHoursForDiff}</td>
 
                                             {/* Differenza (Badge Style) */}
                                             <td className={`p-2 border-l border-gray-100 text-center align-middle ${COL_W_HOUR}`}>
