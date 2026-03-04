@@ -1944,27 +1944,29 @@ export const MonthlySheet: React.FC<Props> = ({ userId, employees, sites, setEmp
                                             {/* Totale */}
                                             <td className={`p-3 border-l border-gray-200 text-center font-black text-gray-800 ${COL_W_HOUR}`}>{totalWork}</td>
 
-                                            {/* Contratto = TOTALE Cedolini (ore effettive calcolate come in Cedolini) */}
+                                            {/* Contratto = TOTALE Cedolini (stesso calcolo) */}
                                             <td className={`p-3 border-gray-200 text-center font-medium text-gray-500 ${COL_W_HOUR}`}>
                                                 {(() => {
-                                                    // Ricalcola con la stessa logica di Cedolini:
-                                                    // PERMESSO: aggiunge (contract - permit) a totalWork, non solo il permit
+                                                    // Cedolini ignora gli override WORK e usa sempre le ore contrattuali calcolate.
+                                                    // Solo FERIE/MALATTIA/ASSENZA/PERMESSO/STRAORDINARIO alterano il totale.
                                                     let twCed = 0;
                                                     daysColumns.forEach(day => {
                                                         const key = `${emp.id}-${day.dayNum}`;
                                                         const override = monthlyData.overrides[key];
                                                         const calculated = getStandardHours(emp, day);
-                                                        const type = override ? override.type : 'WORK';
-                                                        const val = override ? override.value : calculated;
-                                                        if (type === 'WORK') twCed += val;
-                                                        else if (type === 'PERMESSO') twCed += Math.max(0, calculated - val);
-                                                        else if (type === 'STRAORDINARIO') twCed += calculated;
-                                                        // FERIE / MALATTIA / ASSENZA → 0
+                                                        if (override && override.type !== 'WORK') {
+                                                            const t = override.type;
+                                                            const v = override.value;
+                                                            if (t === 'PERMESSO') twCed += Math.max(0, calculated - v);
+                                                            else if (t === 'STRAORDINARIO') twCed += calculated;
+                                                            // FERIE / MALATTIA / ASSENZA → 0
+                                                        } else {
+                                                            twCed += calculated; // nessun override o override WORK → ore contrattuali
+                                                        }
                                                     });
                                                     return Math.round(twCed * 100) / 100;
                                                 })()}
                                             </td>
-
 
                                             {/* Differenza (Badge Style) */}
                                             <td className={`p-2 border-l border-gray-100 text-center align-middle ${COL_W_HOUR}`}>
