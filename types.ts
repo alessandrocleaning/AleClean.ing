@@ -100,6 +100,8 @@ export interface MonthlyData {
   splits?: Record<string, MonthlySplit>;
   // Key: "{empId}" - Array of extra jobs for this month
   extraJobs?: Record<string, ExtraJob[]>;
+  // Key: "{empId}" - Split configuration overrides for this specific month
+  splitConfigs?: Record<string, SplitConfig>;
   // Key: "{empId}" - Override for target salary specifically for this month
   salaryTarget?: Record<string, number>;
   // Key: "{empId}" - Override for target mode specifically for this month

@@ -733,7 +733,7 @@ const getDayKey = (dayIndex: number): DayKey => {
 
 export const MonthlySheet: React.FC<Props> = ({ userId, employees, sites, setEmployees }) => {
     const [currentDate, setCurrentDate] = useState<Date>(new Date());
-    const [monthlyData, setMonthlyData] = useState<MonthlyData>({ overrides: {}, notes: {}, splits: {}, extraJobs: {}, salaryTarget: {}, salaryMode: {}, sickLeaveCodes: {} });
+    const [monthlyData, setMonthlyData] = useState<MonthlyData>({ overrides: {}, notes: {}, splits: {}, extraJobs: {}, splitConfigs: {}, salaryTarget: {}, salaryMode: {}, sickLeaveCodes: {} });
     const [recurringJobs, setRecurringJobs] = useState<Record<string, ExtraJob[]>>({});
     const [activeTool, setActiveTool] = useState<AttendanceType>('WORK');
     const [isGenerating, setIsGenerating] = useState(false);
@@ -765,9 +765,10 @@ export const MonthlySheet: React.FC<Props> = ({ userId, employees, sites, setEmp
                         if (!fetchedData.salaryTarget) fetchedData.salaryTarget = {};
                         if (!fetchedData.salaryMode) fetchedData.salaryMode = {};
                         if (!fetchedData.sickLeaveCodes) fetchedData.sickLeaveCodes = {};
+                        if (!fetchedData.splitConfigs) fetchedData.splitConfigs = {};
                         setMonthlyData(fetchedData);
                     } else {
-                        setMonthlyData({ overrides: {}, notes: {}, splits: {}, extraJobs: {}, salaryTarget: {}, salaryMode: {}, sickLeaveCodes: {} });
+                        setMonthlyData({ overrides: {}, notes: {}, splits: {}, extraJobs: {}, splitConfigs: {}, salaryTarget: {}, salaryMode: {}, sickLeaveCodes: {} });
                     }
                 }
 
@@ -1136,13 +1137,16 @@ export const MonthlySheet: React.FC<Props> = ({ userId, employees, sites, setEmp
     // Saving the full split config manually
     const handleSaveSplitConfig = (newConfig: SplitConfig) => {
         if (!configModalEmp) return;
-        setEmployees(prev => prev.map(emp => {
-            if (emp.id !== configModalEmp.id) return emp;
-            return {
-                ...emp,
-                splitConfig: newConfig
+        const empId = configModalEmp.id;
+        // Salva la splitConfig solo per il mese corrente, non globalmente sul dipendente
+        setMonthlyData(prev => {
+            const newData = {
+                ...prev,
+                splitConfigs: { ...prev.splitConfigs, [empId]: newConfig }
             };
-        }));
+            syncToCloud(storageKeyRaw, newData);
+            return newData;
+        });
         setConfigModalEmp(null);
     };
 
@@ -1880,7 +1884,9 @@ export const MonthlySheet: React.FC<Props> = ({ userId, employees, sites, setEmp
 
                                 const extraJobsValue = extraJobs.reduce((acc, job) => acc + (job.value || 0), 0);
                                 const diffValue = (diff * rate) + (totalOvertime * rate) + totalForfaitAmount + extraJobsValue;
-                                const splits = calculateAutoSplits(diffValue, emp.splitConfig);
+                                // Usa splitConfig mensile se disponibile, altrimenti quella globale del dipendente
+                                const effectiveSplitConfig = monthlyData.splitConfigs?.[emp.id] ?? emp.splitConfig;
+                                const splits = calculateAutoSplits(diffValue, effectiveSplitConfig);
                                 const rowBg = isEven ? 'bg-slate-50' : 'bg-white';
 
                                 return (

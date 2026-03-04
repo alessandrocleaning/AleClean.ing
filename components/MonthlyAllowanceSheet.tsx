@@ -261,6 +261,7 @@ export const MonthlyAllowanceSheet: React.FC<Props> = ({ userId, employees }) =>
         notes: {},
         splits: {},
         extraJobs: {},
+        splitConfigs: {},
         salaryTarget: {},
         salaryMode: {}
     });
@@ -288,14 +289,15 @@ export const MonthlyAllowanceSheet: React.FC<Props> = ({ userId, employees }) =>
                         if (!fetchedData.extraJobs) fetchedData.extraJobs = {};
                         if (!fetchedData.salaryTarget) fetchedData.salaryTarget = {};
                         if (!fetchedData.salaryMode) fetchedData.salaryMode = {};
+                        if (!fetchedData.splitConfigs) fetchedData.splitConfigs = {};
                         setMonthlyData(fetchedData);
                     } else {
-                        setMonthlyData({ overrides: {}, notes: {}, splits: {}, extraJobs: {}, salaryTarget: {}, salaryMode: {} });
+                        setMonthlyData({ overrides: {}, notes: {}, splits: {}, extraJobs: {}, splitConfigs: {}, salaryTarget: {}, salaryMode: {} });
                     }
                 }
             } catch (e) {
                 console.error("Failed to load monthly data", e);
-                if (isMounted) setMonthlyData({ overrides: {}, notes: {}, splits: {}, extraJobs: {}, salaryTarget: {}, salaryMode: {} });
+                if (isMounted) setMonthlyData({ overrides: {}, notes: {}, splits: {}, extraJobs: {}, splitConfigs: {}, salaryTarget: {}, salaryMode: {} });
             } finally {
                 if (isMounted) setIsGenerating(false);
             }
@@ -1061,7 +1063,9 @@ export const MonthlyAllowanceSheet: React.FC<Props> = ({ userId, employees }) =>
                                 const diffValue = (diff * rate) + (totalOvertime * rate) + totalForfaitAmount + extraJobsValue;
 
                                 // --- SPLIT CALCULATION ---
-                                const splits = calculateAutoSplits(diffValue, emp.splitConfig);
+                                // Usa splitConfig mensile se disponibile, altrimenti quella globale del dipendente
+                                const effectiveSplitConfig = monthlyData.splitConfigs?.[emp.id] ?? emp.splitConfig;
+                                const splits = calculateAutoSplits(diffValue, effectiveSplitConfig);
 
                                 // --- TARGET SALARY STATE ---
                                 const target = monthlyData.salaryTarget?.[emp.id] !== undefined
