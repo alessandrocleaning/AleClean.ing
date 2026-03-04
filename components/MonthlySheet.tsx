@@ -1850,7 +1850,7 @@ export const MonthlySheet: React.FC<Props> = ({ userId, employees, sites, setEmp
                                     <React.Fragment key={emp.id}>
                                         {/* ── Separatore visivo: dipendenti NON in cedolini ── */}
                                         {isFirstNonAllowance && (
-                                            <tr className="border-t-4 border-slate-300">
+                                            <tr>
                                                 <td
                                                     colSpan={999}
                                                     className="sticky left-0 bg-slate-100 px-4 py-1.5 text-[11px] font-bold text-slate-500 uppercase tracking-widest border-b border-slate-200 select-none"
