@@ -1944,24 +1944,27 @@ export const MonthlySheet: React.FC<Props> = ({ userId, employees, sites, setEmp
                                             {/* Totale */}
                                             <td className={`p-3 border-l border-gray-200 text-center font-black text-gray-800 ${COL_W_HOUR}`}>{totalWork}</td>
 
-                                            {/* Contratto = importo Tot. Cedolini (target € ridotto proporzionalmente per assenze) */}
-                                            {(() => {
-                                                const contractPay = target > 0 && totalContract > 0
-                                                    ? Math.round((target * (effectiveHoursForDiff / totalContract)) * 100) / 100
-                                                    : target;
-                                                return (
-                                                    <td className={`p-2 border-gray-200 text-center ${COL_W_HOUR}`}>
-                                                        {target > 0 ? (
-                                                            <div className="flex flex-col items-center gap-0.5">
-                                                                <span className={`text-xs font-bold px-1 py-0.5 rounded ${targetMode === 'NET' ? 'text-cyan-600 bg-cyan-50' : 'text-orange-600 bg-orange-50'}`}>
-                                                                    {targetMode === 'NET' ? 'N' : 'L'}
-                                                                </span>
-                                                                <span className="text-sm font-black text-gray-800">{contractPay.toLocaleString('it-IT')} €</span>
-                                                            </div>
-                                                        ) : <span className="text-gray-300 text-xs">—</span>}
-                                                    </td>
-                                                );
-                                            })()}
+                                            {/* Contratto = TOTALE Cedolini (ore effettive calcolate come in Cedolini) */}
+                                            <td className={`p-3 border-gray-200 text-center font-medium text-gray-500 ${COL_W_HOUR}`}>
+                                                {(() => {
+                                                    // Ricalcola con la stessa logica di Cedolini:
+                                                    // PERMESSO: aggiunge (contract - permit) a totalWork, non solo il permit
+                                                    let twCed = 0;
+                                                    daysColumns.forEach(day => {
+                                                        const key = `${emp.id}-${day.dayNum}`;
+                                                        const override = monthlyData.overrides[key];
+                                                        const calculated = getStandardHours(emp, day);
+                                                        const type = override ? override.type : 'WORK';
+                                                        const val = override ? override.value : calculated;
+                                                        if (type === 'WORK') twCed += val;
+                                                        else if (type === 'PERMESSO') twCed += Math.max(0, calculated - val);
+                                                        else if (type === 'STRAORDINARIO') twCed += calculated;
+                                                        // FERIE / MALATTIA / ASSENZA → 0
+                                                    });
+                                                    return Math.round(twCed * 100) / 100;
+                                                })()}
+                                            </td>
+
 
                                             {/* Differenza (Badge Style) */}
                                             <td className={`p-2 border-l border-gray-100 text-center align-middle ${COL_W_HOUR}`}>
