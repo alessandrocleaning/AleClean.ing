@@ -1837,20 +1837,20 @@ export const MonthlySheet: React.FC<Props> = ({ userId, employees, sites, setEmp
                                             })}
 
                                             {/* P / S Column */}
-                                            <td className="p-0 border-l border-gray-200 align-middle w-[60px] min-w-[60px] h-full"> {/* Added width class, removed p-2 */}
+                                            <td className="p-0 border-l border-gray-200 align-middle w-[60px] min-w-[60px] h-full relative"> {/* Added width class, removed p-2 */}
                                                 {(totalPermit > 0 && totalOvertime > 0) ? (
-                                                    <div className="flex flex-col items-center justify-center h-full w-full summary-split" style={{ minHeight: '38px' }}>
-                                                        <div className="flex-1 flex items-center justify-center w-full border-b border-gray-200 text-gray-800 font-bold text-[10px] bg-transparent">
+                                                    <div className="flex flex-col items-center justify-center h-full w-full summary-split absolute inset-0">
+                                                        <div className="h-1/2 flex items-center justify-center w-full border-b border-gray-200 text-purple-900 font-bold text-xs bg-purple-100">
                                                             P: {totalPermit}
                                                         </div>
-                                                        <div className="flex-1 flex items-center justify-center w-full text-gray-800 font-bold text-[10px] bg-transparent">
+                                                        <div className="h-1/2 flex items-center justify-center w-full text-orange-900 font-bold text-xs bg-orange-100">
                                                             S: {totalOvertime}
                                                         </div>
                                                     </div>
                                                 ) : (
                                                     <div className="flex items-center justify-center h-full w-full p-2">
-                                                        {totalPermit > 0 && <span className="font-bold text-xs text-gray-800">P: {totalPermit}</span>}
-                                                        {totalOvertime > 0 && <span className="font-bold text-xs text-gray-800">S: {totalOvertime}</span>}
+                                                        {totalPermit > 0 && <span className="font-bold text-xs text-purple-900 bg-purple-100 px-2 py-0.5 rounded-full border border-purple-200">P: {totalPermit}</span>}
+                                                        {totalOvertime > 0 && <span className="font-bold text-xs text-orange-900 bg-orange-100 px-2 py-0.5 rounded-full border border-orange-200">S: {totalOvertime}</span>}
                                                         {totalPermit === 0 && totalOvertime === 0 && <span className="text-gray-200">-</span>}
                                                     </div>
                                                 )}
