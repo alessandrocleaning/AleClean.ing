@@ -405,6 +405,21 @@ export const MonthlyAllowanceSheet: React.FC<Props> = ({ userId, employees }) =>
         saveToStorage(newData);
     };
 
+    const handleUpdateSickLeaveCode = (empId: string, code: string) => {
+        const currentCodes = monthlyData.sickLeaveCodes || {};
+        const newCodes = { ...currentCodes };
+        if (!code.trim()) {
+            delete newCodes[empId];
+        } else {
+            newCodes[empId] = code.toUpperCase();
+        }
+        const newData = {
+            ...monthlyData,
+            sickLeaveCodes: newCodes
+        };
+        saveToStorage(newData);
+    };
+
     const handleUpdateMonthlySalaryMode = (empId: string) => {
         const currentMode = monthlyData.salaryMode?.[empId];
         // Default fallback
@@ -482,19 +497,67 @@ export const MonthlyAllowanceSheet: React.FC<Props> = ({ userId, employees }) =>
         });
 
         let csvContent = "";
-        const rows = clone.querySelectorAll('tr');
+        const headRow = ['Dipendente', ...daysColumns.map(d => `${d.dayNum} ${d.dayName}`), 'Tot.', 'P/S', 'Netto/Lordo', 'Trasf.', 'Benzina', 'Spese', 'Malattia'];
+        csvContent += headRow.map(h => `"${h.replace(/"/g, '""')}"`).join(";") + "\r\n";
 
-        rows.forEach(row => {
-            const cols = row.querySelectorAll('th, td');
+        const bodyRows = clone.querySelectorAll('tbody tr');
+        const getCellText = (cell: Element | null) => {
+            if (!cell) return '';
+            let text = (cell as HTMLElement).innerText || cell.textContent || "";
+            return text.replace(/(\r\n|\n|\r)/gm, " ").replace(/\s+/g, ' ').trim();
+        };
+
+        bodyRows.forEach(row => {
             const rowData: string[] = [];
+            const cells = row.querySelectorAll('td');
 
-            cols.forEach(col => {
-                let text = (col as HTMLElement).innerText || col.textContent || "";
-                text = text.replace(/(\r\n|\n|\r)/gm, " ").replace(/\s+/g, ' ').trim();
+            // Employee Name (first cell)
+            rowData.push(`"${getCellText(cells[0]).replace(/"/g, '""')}"`);
 
-                const escaped = text.replace(/"/g, '""');
-                rowData.push(`"${escaped}"`);
-            });
+            // Day cells
+            for (let i = 1; i <= daysColumns.length; i++) {
+                const cell = cells[i];
+                let cellText = getCellText(cell);
+                rowData.push(`"${cellText.replace(/"/g, '""')}"`);
+            }
+
+            // Summary columns
+            const cellOffset = daysColumns.length + 1; // +1 for employee name column
+
+            // Total
+            rowData.push(`"${getCellText(cells[cellOffset]).replace(/"/g, '""')}"`);
+
+            // P/S
+            const psCell = cells[cellOffset + 1];
+            let psText = '';
+            const summarySplit = psCell.querySelector('.summary-split');
+            if (summarySplit) {
+                const topDiv = summarySplit.querySelector('div:nth-child(1)');
+                const bottomDiv = summarySplit.querySelector('div:nth-child(2)');
+                const topText = getCellText(topDiv);
+                const bottomText = getCellText(bottomDiv);
+                if (topText && bottomText) {
+                    psText = `${topText} / ${bottomText}`;
+                } else if (topText) {
+                    psText = topText;
+                } else if (bottomText) {
+                    psText = bottomText;
+                }
+            } else {
+                psText = getCellText(psCell);
+            }
+            rowData.push(`"${psText.replace(/"/g, '""')}"`);
+
+            // Netto/Lordo
+            rowData.push(`"${getCellText(cells[cellOffset + 2]).replace(/"/g, '""')}"`);
+            // Trasferta
+            rowData.push(`"${getCellText(cells[cellOffset + 3]).replace(/"/g, '""')}"`);
+            // Benzina
+            rowData.push(`"${getCellText(cells[cellOffset + 4]).replace(/"/g, '""')}"`);
+            // Spese
+            rowData.push(`"${getCellText(cells[cellOffset + 5]).replace(/"/g, '""')}"`);
+            // Malattia
+            rowData.push(`"${getCellText(cells[cellOffset + 6]).replace(/"/g, '""')}"`);
 
             csvContent += rowData.join(";") + "\r\n";
         });
@@ -898,9 +961,12 @@ export const MonthlyAllowanceSheet: React.FC<Props> = ({ userId, employees }) =>
 
                                 {/* ADDED COLUMNS */}
                                 <th className={`${SUMMARY_HEADER_CLASS} ${COL_W_TARGET} bg-cyan-600 border-l border-white/10`}>Netto/Lordo</th>
-                                <th className={`${SUMMARY_HEADER_CLASS} ${COL_W_MONEY} bg-blue-500`}>Trasferta</th>
+                                <th className={`${SUMMARY_HEADER_CLASS} ${COL_W_MONEY} bg-blue-500 border-l border-white/10`}>Trasferta</th>
                                 <th className={`${SUMMARY_HEADER_CLASS} ${COL_W_MONEY} bg-orange-500`}>Benzina</th>
                                 <th className={`${SUMMARY_HEADER_CLASS} ${COL_W_MONEY} bg-purple-500`}>Spese</th>
+
+                                {/* Sick Leave Code (PUC) Group */}
+                                <th className={`${SUMMARY_HEADER_CLASS} ${COL_W_MONEY} bg-red-500 border-l border-white/10`}>Malattia</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -1110,6 +1176,18 @@ export const MonthlyAllowanceSheet: React.FC<Props> = ({ userId, employees }) =>
                                             {/* SPESE */}
                                             <td className={`p-3 border-b border-gray-200 text-center text-sm font-bold text-purple-700 ${COL_W_MONEY}`}>
                                                 {splits.expenses > 0 ? formatCurrency(splits.expenses) : <span className="text-gray-200">-</span>}
+                                            </td>
+
+                                            {/* MALATTIA (PUC Code) */}
+                                            <td className={`p-2 border-b border-l-4 border-gray-50 text-center ${COL_W_MONEY}`}>
+                                                <input
+                                                    type="text"
+                                                    value={monthlyData.sickLeaveCodes?.[emp.id] || ''}
+                                                    onChange={(e) => handleUpdateSickLeaveCode(emp.id, e.target.value)}
+                                                    className={`w-full text-center bg-transparent text-xs font-bold text-red-700 placeholder-red-200/50 outline-none border-b border-gray-200 focus:border-red-400 transition-all uppercase ${NO_SPINNER_CLASS}`}
+                                                    placeholder="PUC..."
+                                                    title="Inserisci Codice PUC Malattia"
+                                                />
                                             </td>
 
                                         </tr>

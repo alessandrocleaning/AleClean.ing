@@ -104,6 +104,8 @@ export interface MonthlyData {
   salaryTarget?: Record<string, number>;
   // Key: "{empId}" - Override for target mode specifically for this month
   salaryMode?: Record<string, 'NET' | 'GROSS'>;
+  // Key: "{empId}" - Text string for Sick Leave Code (PUC)
+  sickLeaveCodes?: Record<string, string>;
 }
 
 export interface DailyRecord {

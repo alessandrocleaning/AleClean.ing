@@ -723,14 +723,14 @@ DayInputCell.displayName = 'DayInputCell';
 
 const getDayKey = (dayIndex: number): DayKey => {
     const map: Record<number, DayKey> = {
-        0: 'sun', 1: 'mon', 2: 'tue', 3: 'wed', 4: 'thu', 5: 'fri', 6: 'sat'
+        0: 'sun', 1: 'tue', 2: 'wed', 3: 'wed', 4: 'thu', 5: 'fri', 6: 'sat'
     };
     return map[dayIndex];
 };
 
 export const MonthlySheet: React.FC<Props> = ({ userId, employees, sites, setEmployees }) => {
     const [currentDate, setCurrentDate] = useState<Date>(new Date());
-    const [monthlyData, setMonthlyData] = useState<MonthlyData>({ overrides: {}, notes: {}, splits: {}, extraJobs: {}, salaryTarget: {}, salaryMode: {} });
+    const [monthlyData, setMonthlyData] = useState<MonthlyData>({ overrides: {}, notes: {}, splits: {}, extraJobs: {}, salaryTarget: {}, salaryMode: {}, sickLeaveCodes: {} });
     const [recurringJobs, setRecurringJobs] = useState<Record<string, ExtraJob[]>>({});
     const [activeTool, setActiveTool] = useState<AttendanceType>('WORK');
     const [isGenerating, setIsGenerating] = useState(false);
@@ -761,9 +761,10 @@ export const MonthlySheet: React.FC<Props> = ({ userId, employees, sites, setEmp
                         if (!fetchedData.extraJobs) fetchedData.extraJobs = {};
                         if (!fetchedData.salaryTarget) fetchedData.salaryTarget = {};
                         if (!fetchedData.salaryMode) fetchedData.salaryMode = {};
+                        if (!fetchedData.sickLeaveCodes) fetchedData.sickLeaveCodes = {};
                         setMonthlyData(fetchedData);
                     } else {
-                        setMonthlyData({ overrides: {}, notes: {}, splits: {}, extraJobs: {}, salaryTarget: {}, salaryMode: {} });
+                        setMonthlyData({ overrides: {}, notes: {}, splits: {}, extraJobs: {}, salaryTarget: {}, salaryMode: {}, sickLeaveCodes: {} });
                     }
                 }
 
@@ -775,7 +776,7 @@ export const MonthlySheet: React.FC<Props> = ({ userId, employees, sites, setEmp
             } catch (e) {
                 console.error("Failed to load monthly data from Firestore", e);
                 if (isMounted) {
-                    setMonthlyData({ overrides: {}, notes: {}, splits: {}, extraJobs: {}, salaryTarget: {}, salaryMode: {} });
+                    setMonthlyData({ overrides: {}, notes: {}, splits: {}, extraJobs: {}, salaryTarget: {}, salaryMode: {}, sickLeaveCodes: {} });
                     setRecurringJobs({});
                 }
             } finally {
@@ -1034,6 +1035,24 @@ export const MonthlySheet: React.FC<Props> = ({ userId, employees, sites, setEmp
             const newData = {
                 ...prev,
                 salaryTarget: { ...prev.salaryTarget, [empId]: value }
+            };
+            syncToCloud(storageKeyRaw, newData);
+            return newData;
+        });
+    };
+
+    const handleUpdateSickLeaveCode = (empId: string, code: string) => {
+        setMonthlyData(prev => {
+            const currentCodes = prev.sickLeaveCodes || {};
+            const newCodes = { ...currentCodes };
+            if (!code.trim()) {
+                delete newCodes[empId];
+            } else {
+                newCodes[empId] = code.toUpperCase();
+            }
+            const newData = {
+                ...prev,
+                sickLeaveCodes: newCodes
             };
             syncToCloud(storageKeyRaw, newData);
             return newData;
@@ -1748,6 +1767,9 @@ export const MonthlySheet: React.FC<Props> = ({ userId, employees, sites, setEmp
                                 <th className={`${TH_BASE} ${COL_W_MONEY} bg-sky-500 border-l-4 border-white/20`}>Trasf.</th>
                                 <th className={`${TH_BASE} ${COL_W_MONEY} bg-amber-500`}>Benzina</th>
                                 <th className={`${TH_BASE} ${COL_W_MONEY} bg-fuchsia-500`}>Spese</th>
+
+                                {/* Sick Leave Code (PUC) Group */}
+                                <th className={`${TH_BASE} ${COL_W_MONEY} bg-red-500 border-l-4 border-white/20`}>Malattia</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -1908,6 +1930,18 @@ export const MonthlySheet: React.FC<Props> = ({ userId, employees, sites, setEmp
 
                                             {/* Spese */}
                                             <td onClick={() => setConfigModalEmp(emp)} className={`p-3 border-gray-200 text-center text-sm font-bold cursor-pointer hover:bg-fuchsia-50 transition-colors bg-fuchsia-50/10 ${COL_W_MONEY} text-fuchsia-700`}>{splits.expenses > 0 ? formatCurrency(splits.expenses) : <span className="text-gray-200">-</span>}</td>
+
+                                            {/* Malattia (PUC Code) */}
+                                            <td className={`p-2 border-l-4 border-gray-50 text-center ${COL_W_MONEY}`}>
+                                                <input
+                                                    type="text"
+                                                    value={monthlyData.sickLeaveCodes?.[emp.id] || ''}
+                                                    onChange={(e) => handleUpdateSickLeaveCode(emp.id, e.target.value)}
+                                                    className={`w-full text-center bg-transparent text-xs font-bold text-red-700 placeholder-red-200/50 outline-none border-b border-gray-200 focus:border-red-400 transition-all uppercase ${NO_SPINNER_CLASS}`}
+                                                    placeholder="PUC..."
+                                                    title="Inserisci Codice PUC Malattia"
+                                                />
+                                            </td>
                                         </tr>
 
                                         {/* Extra Jobs Rows */}
@@ -1952,7 +1986,7 @@ export const MonthlySheet: React.FC<Props> = ({ userId, employees, sites, setEmp
                                                             <input type="number" min="0" step="1" value={job.value === 0 ? '' : job.value} onChange={(e) => handleUpdateExtraJob(emp.id, job.id, 'value', e.target.value)} className={`w-20 text-center bg-white border border-yellow-200 rounded px-1 py-0.5 text-xs font-bold text-gray-700 outline-none focus:border-yellow-400 ${NO_SPINNER_CLASS}`} placeholder="Valore €" />
                                                         </div>
                                                     </td>
-                                                    <td colSpan={3} className="text-center text-[10px] text-gray-400 border-l border-gray-100 italic pt-2">
+                                                    <td colSpan={4} className="text-center text-[10px] text-gray-400 border-l border-gray-100 italic pt-2">
                                                         {isLocked ? <span className="flex items-center justify-center gap-1 text-blue-500 font-bold not-italic"><Lock className="w-2.5 h-2.5" /> Fisso</span> : 'Una Tantum'}
                                                     </td>
                                                 </tr>
