@@ -888,40 +888,48 @@ export const MonthlySheet: React.FC<Props> = ({ userId, employees, sites, setEmp
             // UNLOCK: Move from Recurring to Monthly (for this month)
 
             // 1. Remove from Recurring
-            const newRecurring = { ...recurringJobs };
-            newRecurring[empId] = (newRecurring[empId] || []).filter(j => j.id !== job.id);
-            setRecurringJobs(newRecurring);
-            syncRecurringToCloud(newRecurring);
+            setRecurringJobs(prev => {
+                const newRecurring = { ...prev };
+                newRecurring[empId] = (newRecurring[empId] || []).filter(j => j.id !== job.id);
+                syncRecurringToCloud(newRecurring);
+                return newRecurring;
+            });
 
-            // 2. Add to Monthly (outside setState)
-            const currentExtras = monthlyData.extraJobs?.[empId] || [];
-            const unlockedJob = { ...job, isLocked: false, startMonth: undefined };
-            const newData = {
-                ...monthlyData,
-                extraJobs: { ...monthlyData.extraJobs, [empId]: [...currentExtras, unlockedJob] }
-            };
-            setMonthlyData(newData);
-            syncToCloud(storageKeyRaw, newData);
+            // 2. Add to Monthly
+            setMonthlyData(prev => {
+                const currentExtras = prev.extraJobs?.[empId] || [];
+                const unlockedJob = { ...job, isLocked: false, startMonth: undefined };
+                const newData = {
+                    ...prev,
+                    extraJobs: { ...prev.extraJobs, [empId]: [...currentExtras, unlockedJob] }
+                };
+                syncToCloud(storageKeyRaw, newData);
+                return newData;
+            });
 
         } else {
             // LOCK: Move from Monthly to Recurring
 
             // 1. Add to Recurring
-            const newRecurring = { ...recurringJobs };
-            const lockedJob = { ...job, isLocked: true, startMonth: storageKeyRaw };
-            newRecurring[empId] = [...(newRecurring[empId] || []), lockedJob];
-            setRecurringJobs(newRecurring);
-            syncRecurringToCloud(newRecurring);
+            setRecurringJobs(prev => {
+                const newRecurring = { ...prev };
+                const lockedJob = { ...job, isLocked: true, startMonth: storageKeyRaw };
+                newRecurring[empId] = [...(newRecurring[empId] || []), lockedJob];
+                syncRecurringToCloud(newRecurring);
+                return newRecurring;
+            });
 
-            // 2. Remove from Monthly (outside setState)
-            const currentExtras = monthlyData.extraJobs?.[empId] || [];
-            const filteredExtras = currentExtras.filter(j => j.id !== job.id);
-            const newData = {
-                ...monthlyData,
-                extraJobs: { ...monthlyData.extraJobs, [empId]: filteredExtras }
-            };
-            setMonthlyData(newData);
-            syncToCloud(storageKeyRaw, newData);
+            // 2. Remove from Monthly
+            setMonthlyData(prev => {
+                const currentExtras = prev.extraJobs?.[empId] || [];
+                const filteredExtras = currentExtras.filter(j => j.id !== job.id);
+                const newData = {
+                    ...prev,
+                    extraJobs: { ...prev.extraJobs, [empId]: filteredExtras }
+                };
+                syncToCloud(storageKeyRaw, newData);
+                return newData;
+            });
         }
     };
 
@@ -930,51 +938,57 @@ export const MonthlySheet: React.FC<Props> = ({ userId, employees, sites, setEmp
         const isRecurring = recurringJobs[empId]?.some(j => j.id === jobId);
 
         if (isRecurring) {
-            // Update Recurring (compute outside callback)
-            const currentExtras = recurringJobs[empId] || [];
-            const updatedExtras = currentExtras.map(job => {
-                if (job.id !== jobId) return job;
-                if (field === 'hour' && dayNum !== undefined) {
-                    const newHours = { ...job.hours };
-                    if (value === 0 || value === '') delete newHours[dayNum];
-                    else newHours[dayNum] = parseFloat(value);
-                    return { ...job, hours: newHours };
-                } else if (field === 'description') {
-                    return { ...job, description: value };
-                } else if (field === 'value') {
-                    return { ...job, value: parseFloat(value) || 0 };
-                }
-                return job;
-            });
-            const newRecurring = { ...recurringJobs, [empId]: updatedExtras };
-            setRecurringJobs(newRecurring);
-            syncRecurringToCloud(newRecurring);
-        } else {
-            // Update Monthly (compute outside callback)
-            const currentExtras = monthlyData.extraJobs?.[empId] || [];
-            const updatedExtras = currentExtras.map(job => {
-                if (job.id !== jobId) return job;
-                if (field === 'hour' && dayNum !== undefined) {
-                    const newHours = { ...job.hours };
-                    if (value === 0 || value === '') {
-                        delete newHours[dayNum];
-                    } else {
-                        newHours[dayNum] = parseFloat(value);
+            // Update Recurring State
+            setRecurringJobs(prev => {
+                const currentExtras = prev[empId] || [];
+                const updatedExtras = currentExtras.map(job => {
+                    if (job.id !== jobId) return job;
+                    if (field === 'hour' && dayNum !== undefined) {
+                        const newHours = { ...job.hours };
+                        if (value === 0 || value === '') delete newHours[dayNum];
+                        else newHours[dayNum] = parseFloat(value);
+                        return { ...job, hours: newHours };
+                    } else if (field === 'description') {
+                        return { ...job, description: value };
+                    } else if (field === 'value') {
+                        return { ...job, value: parseFloat(value) || 0 };
                     }
-                    return { ...job, hours: newHours };
-                } else if (field === 'description') {
-                    return { ...job, description: value };
-                } else if (field === 'value') {
-                    return { ...job, value: parseFloat(value) || 0 };
-                }
-                return job;
+                    return job;
+                });
+                const newRecurring = { ...prev, [empId]: updatedExtras };
+                syncRecurringToCloud(newRecurring);
+                return newRecurring;
             });
-            const newData = {
-                ...monthlyData,
-                extraJobs: { ...monthlyData.extraJobs, [empId]: updatedExtras }
-            };
-            setMonthlyData(newData);
-            syncToCloud(storageKeyRaw, newData);
+        } else {
+            // Update Monthly State
+            setMonthlyData(prev => {
+                const currentExtras = prev.extraJobs?.[empId] || [];
+                const updatedExtras = currentExtras.map(job => {
+                    if (job.id !== jobId) return job;
+
+                    if (field === 'hour' && dayNum !== undefined) {
+                        const newHours = { ...job.hours };
+                        if (value === 0 || value === '') {
+                            delete newHours[dayNum];
+                        } else {
+                            newHours[dayNum] = parseFloat(value);
+                        }
+                        return { ...job, hours: newHours };
+                    } else if (field === 'description') {
+                        return { ...job, description: value };
+                    } else if (field === 'value') {
+                        return { ...job, value: parseFloat(value) || 0 };
+                    }
+                    return job;
+                });
+
+                const newData = {
+                    ...prev,
+                    extraJobs: { ...prev.extraJobs, [empId]: updatedExtras }
+                };
+                syncToCloud(storageKeyRaw, newData);
+                return newData;
+            });
         }
     };
 
@@ -983,68 +997,80 @@ export const MonthlySheet: React.FC<Props> = ({ userId, employees, sites, setEmp
         const isRecurring = recurringJobs[empId]?.some(j => j.id === jobId);
 
         if (isRecurring) {
-            // Compute outside callback
-            const updatedExtras = (recurringJobs[empId] || []).filter(j => j.id !== jobId);
-            const newRecurring = { ...recurringJobs, [empId]: updatedExtras };
-            setRecurringJobs(newRecurring);
-            syncRecurringToCloud(newRecurring);
+            setRecurringJobs(prev => {
+                const currentExtras = prev[empId] || [];
+                const updatedExtras = currentExtras.filter(j => j.id !== jobId);
+                const newRecurring = { ...prev, [empId]: updatedExtras };
+                syncRecurringToCloud(newRecurring);
+                return newRecurring;
+            });
         } else {
-            const currentExtras = monthlyData.extraJobs?.[empId] || [];
-            const updatedExtras = currentExtras.filter(j => j.id !== jobId);
-            const newData = {
-                ...monthlyData,
-                extraJobs: { ...monthlyData.extraJobs, [empId]: updatedExtras }
-            };
-            setMonthlyData(newData);
-            syncToCloud(storageKeyRaw, newData);
+            setMonthlyData(prev => {
+                const currentExtras = prev.extraJobs?.[empId] || [];
+                const updatedExtras = currentExtras.filter(j => j.id !== jobId);
+                const newData = {
+                    ...prev,
+                    extraJobs: { ...prev.extraJobs, [empId]: updatedExtras }
+                };
+                syncToCloud(storageKeyRaw, newData);
+                return newData;
+            });
         }
     };
 
     // --- HANDLER FOR TIME ENTRY UPDATE ---
     const handleUpdateTimeEntries = (newRecords: Record<string, AttendanceRecord>) => {
-        const newOverrides = { ...monthlyData.overrides, ...newRecords };
-        const newData = { ...monthlyData, overrides: newOverrides };
-        setMonthlyData(newData);
-        syncToCloud(storageKeyRaw, newData);
+        setMonthlyData(prev => {
+            const newOverrides = { ...prev.overrides, ...newRecords };
+            const newData = { ...prev, overrides: newOverrides };
+            syncToCloud(storageKeyRaw, newData);
+            return newData;
+        });
     };
 
     // --- HANDLER FOR MONTHLY SALARY TARGET ---
     const handleUpdateMonthlySalary = (empId: string, value: number) => {
-        const newData = {
-            ...monthlyData,
-            salaryTarget: { ...monthlyData.salaryTarget, [empId]: value }
-        };
-        setMonthlyData(newData);
-        syncToCloud(storageKeyRaw, newData);
+        setMonthlyData(prev => {
+            const newData = {
+                ...prev,
+                salaryTarget: { ...prev.salaryTarget, [empId]: value }
+            };
+            syncToCloud(storageKeyRaw, newData);
+            return newData;
+        });
     };
 
     const handleUpdateMonthlySalaryMode = (empId: string) => {
-        const currentMode = monthlyData.salaryMode?.[empId];
-        const newMode: 'NET' | 'GROSS' = (currentMode === 'NET' || (!currentMode && employees.find(e => e.id === empId)?.targetMode === 'NET')) ? 'GROSS' : 'NET';
-        const newData = {
-            ...monthlyData,
-            salaryMode: { ...monthlyData.salaryMode, [empId]: newMode }
-        };
-        setMonthlyData(newData);
-        syncToCloud(storageKeyRaw, newData);
+        setMonthlyData(prev => {
+            const currentMode = prev.salaryMode?.[empId];
+            const newMode: 'NET' | 'GROSS' = (currentMode === 'NET' || (!currentMode && employees.find(e => e.id === empId)?.targetMode === 'NET')) ? 'GROSS' : 'NET';
+
+            const newData = {
+                ...prev,
+                salaryMode: { ...prev.salaryMode, [empId]: newMode }
+            };
+            syncToCloud(storageKeyRaw, newData);
+            return newData;
+        });
     };
 
 
     const safeHandleInteract = (empId: string, dayNum: number, type: AttendanceType, value: number) => {
         const key = `${empId}-${dayNum}`;
-        // Compute the new overrides imperatively (not inside setState callback)
-        const newOverrides = { ...monthlyData.overrides };
-        const current = newOverrides[key];
-        if (activeTool !== 'WORK' && current?.type === activeTool && activeTool !== 'PERMESSO' && activeTool !== 'STRAORDINARIO') {
-            delete newOverrides[key];
-        } else if (type === 'WORK' && value === 0 && activeTool !== 'WORK') {
-            delete newOverrides[key];
-        } else {
-            newOverrides[key] = { type, value };
-        }
-        const nextData = { ...monthlyData, overrides: newOverrides };
-        setMonthlyData(nextData);
-        syncToCloud(storageKeyRaw, nextData);
+        setMonthlyData(prev => {
+            const newOverrides = { ...prev.overrides };
+            const current = newOverrides[key];
+            if (activeTool !== 'WORK' && current?.type === activeTool && activeTool !== 'PERMESSO' && activeTool !== 'STRAORDINARIO') {
+                delete newOverrides[key];
+            } else if (type === 'WORK' && value === 0 && activeTool !== 'WORK') {
+                delete newOverrides[key];
+            } else {
+                newOverrides[key] = { type, value };
+            }
+            const nextData = { ...prev, overrides: newOverrides };
+            syncToCloud(storageKeyRaw, nextData);
+            return nextData;
+        });
     };
 
     const goToPrevMonth = () => setCurrentDate(prev => subMonths(prev, 1));
