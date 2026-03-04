@@ -644,7 +644,7 @@ export const SiteManager: React.FC<Props> = ({ sites, setSites, employees, setEm
                                             <div className="flex items-center justify-between gap-1.5 min-w-0">
                                                 {/* CATEGORIA (sinistra, troncata se occupa troppo spazio) */}
                                                 {site.category ? (
-                                                    <span className={`inline-flex px-1.5 py-0.5 rounded text-[9px] uppercase tracking-wide font-extrabold border truncate max-w-[70px] ${CATEGORY_COLORS[site.category].bg} ${CATEGORY_COLORS[site.category].text} ${CATEGORY_COLORS[site.category].border}`}>
+                                                    <span className={`inline-flex px-1.5 py-0.5 rounded text-[9px] uppercase tracking-wide font-extrabold border flex-shrink-0 ${CATEGORY_COLORS[site.category].bg} ${CATEGORY_COLORS[site.category].text} ${CATEGORY_COLORS[site.category].border}`}>
                                                         {site.category}
                                                     </span>
                                                 ) : <div />}
