@@ -1648,8 +1648,8 @@ export const MonthlySheet: React.FC<Props> = ({ userId, employees, sites, setEmp
 
     // --- STYLING CONSTANTS FOR COLUMNS (OPTIMIZED SIZES) ---
     const COL_W_HOUR = "w-[70px] min-w-[70px]";
-    const COL_W_RATE = "w-[80px] min-w-[80px]";
-    const COL_W_TARGET = "w-[85px] min-w-[85px]";
+    const COL_W_RATE = "w-[90px] min-w-[90px]";
+    const COL_W_TARGET = "w-[100px] min-w-[100px]";
     const COL_W_MONEY = "w-[85px] min-w-[85px]";
 
     // Common styles for TH cells
@@ -1760,8 +1760,8 @@ export const MonthlySheet: React.FC<Props> = ({ userId, employees, sites, setEmp
                                 <th className={`${TH_BASE} ${COL_W_RATE} bg-indigo-600 border-l-4 border-white/20`}>Tariffa</th>
                                 <th className={`${TH_BASE} ${COL_W_TARGET} bg-cyan-600 p-0`}>
                                     <div className="flex flex-col items-center justify-center leading-none py-1">
-                                        <span>NETTO</span>
-                                        <span className="text-[9px] text-cyan-200 mt-1 pt-0.5 border-t border-cyan-500/50 w-[80%] text-center">LORDO</span>
+                                        <span className="text-white text-[10px]">NETTO</span>
+                                        <span className="text-white text-[10px] mt-1 pt-0.5 border-t border-cyan-500/50 w-[80%] text-center">LORDO</span>
                                     </div>
                                 </th>
 
@@ -1905,7 +1905,7 @@ export const MonthlySheet: React.FC<Props> = ({ userId, employees, sites, setEmp
                                             <td className={`p-0 border-l-4 border-gray-50 text-center relative group/rate ${COL_W_RATE}`}>
                                                 <div className="relative flex items-center h-full w-full">
                                                     <span className="absolute right-2 z-10 text-indigo-400 text-[10px] pointer-events-none font-bold">€</span>
-                                                    <input type="number" min="0" step="0.5" value={rate === 0 ? '' : rate} onChange={(e) => { const val = e.target.value === '' ? 0 : parseFloat(e.target.value); setEmployees(prev => prev.map(ev => ev.id === emp.id ? { ...ev, hourlyRate: val } : ev)); }} className={`w-full h-full text-center bg-transparent text-sm font-bold text-indigo-700 hover:bg-indigo-50 focus:bg-indigo-50 focus:text-indigo-900 outline-none transition-all ${NO_SPINNER_CLASS}`} placeholder="0" />
+                                                    <input type="number" min="0" step="0.5" value={rate === 0 ? '' : rate} onChange={(e) => { const val = e.target.value === '' ? 0 : parseFloat(e.target.value); setEmployees(prev => prev.map(ev => ev.id === emp.id ? { ...ev, hourlyRate: val } : ev)); }} className={`w-full h-full text-center bg-transparent text-sm font-bold text-indigo-700 hover:bg-indigo-50 focus:bg-indigo-50 focus:text-indigo-900 outline-none transition-all pr-5 pl-2 ${NO_SPINNER_CLASS}`} placeholder="0" />
                                                 </div>
                                             </td>
 
@@ -1914,7 +1914,7 @@ export const MonthlySheet: React.FC<Props> = ({ userId, employees, sites, setEmp
                                                 <div className="relative flex items-center h-full w-full">
                                                     <button onClick={() => handleUpdateMonthlySalaryMode(emp.id)} className={`absolute right-1 z-10 text-[9px] font-black w-4 h-4 flex items-center justify-center rounded cursor-pointer transition-all select-none border ${targetMode === 'NET' ? 'bg-cyan-50 text-cyan-600 border-cyan-200 hover:bg-cyan-100' : 'bg-orange-50 text-orange-600 border-orange-200 hover:bg-orange-100'}`} title={targetMode === 'NET' ? 'Passa a Lordo' : 'Passa a Netto'}>{targetMode === 'NET' ? 'N' : 'L'}</button>
                                                     <span className="absolute right-6 z-10 text-cyan-600 text-[10px] pointer-events-none font-bold opacity-80">€</span>
-                                                    <input type="number" min="0" step="10" value={target === 0 ? '' : target} onChange={(e) => { const val = e.target.value === '' ? 0 : parseFloat(e.target.value); handleUpdateMonthlySalary(emp.id, val); }} className={`w-full h-full text-center bg-transparent text-sm font-bold text-cyan-900 hover:bg-cyan-50 focus:bg-cyan-50 outline-none focus:border-cyan-500 transition-all ${NO_SPINNER_CLASS}`} placeholder="0" />
+                                                    <input type="number" min="0" step="10" value={target === 0 ? '' : target} onChange={(e) => { const val = e.target.value === '' ? 0 : parseFloat(e.target.value); handleUpdateMonthlySalary(emp.id, val); }} className={`w-full h-full text-center bg-transparent text-sm font-bold text-cyan-900 hover:bg-cyan-50 focus:bg-cyan-50 outline-none focus:border-cyan-500 transition-all pr-8 pl-1 ${NO_SPINNER_CLASS}`} placeholder="0" />
                                                 </div>
                                             </td>
 
