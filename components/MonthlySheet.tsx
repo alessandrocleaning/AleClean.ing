@@ -1160,7 +1160,13 @@ export const MonthlySheet: React.FC<Props> = ({ userId, employees, sites, setEmp
 
                 // Special handling for split cells (Work / Permit)
                 const splitContainer = cellEl.querySelector('.flex-col.items-center.justify-center');
-                if (splitContainer && cellEl.querySelectorAll('span').length > 0) {
+                const summarySplit = cellEl.querySelector('.summary-split');
+
+                if (summarySplit && summarySplit.children.length >= 2) {
+                    const line1 = (summarySplit.children[0] as HTMLElement).textContent?.trim() || '';
+                    const line2 = (summarySplit.children[1] as HTMLElement).textContent?.trim() || '';
+                    text = [line1, line2].filter(Boolean).join(' / ');
+                } else if (splitContainer && cellEl.querySelectorAll('span').length > 0) {
                     const spans = Array.from(cellEl.querySelectorAll('span')).map(s => s.textContent?.trim() || '');
 
                     const lines: string[] = [];
@@ -1376,7 +1382,9 @@ export const MonthlySheet: React.FC<Props> = ({ userId, employees, sites, setEmp
                         // Detect pre-processed split cells (PERMESSO / STRAORDINARIO)
                         if (data.cell.raw instanceof HTMLElement) {
                             const td = data.cell.raw as HTMLElement;
-                            const outerDiv = td.querySelector('div[style*="text-align:center"]');
+                            let outerDiv = td.querySelector('div[style*="text-align:center"]');
+                            if (!outerDiv) outerDiv = td.querySelector('.summary-split');
+
                             if (outerDiv && outerDiv.children.length >= 2) {
                                 const line1 = (outerDiv.children[0] as HTMLElement).textContent?.trim() || '';
                                 const line2 = (outerDiv.children[1] as HTMLElement).textContent?.trim() || '';
@@ -1813,12 +1821,23 @@ export const MonthlySheet: React.FC<Props> = ({ userId, employees, sites, setEmp
                                             })}
 
                                             {/* P / S Column */}
-                                            <td className="p-2 border-l border-gray-200 text-center text-xs align-middle w-[60px] min-w-[60px]"> {/* Added width class */}
-                                                <div className="flex flex-col items-center justify-center gap-1.5">
-                                                    {totalPermit > 0 && <span className="font-bold text-xs text-purple-700 bg-purple-100 px-2 py-0.5 rounded-full border border-purple-200">P: {totalPermit}</span>}
-                                                    {totalOvertime > 0 && <span className="font-bold text-xs text-orange-700 bg-orange-100 px-2 py-0.5 rounded-full border border-orange-200">S: {totalOvertime}</span>}
-                                                    {totalPermit === 0 && totalOvertime === 0 && <span className="text-gray-200">-</span>}
-                                                </div>
+                                            <td className="p-0 border-l border-gray-200 align-middle w-[60px] min-w-[60px] h-full"> {/* Added width class, removed p-2 */}
+                                                {(totalPermit > 0 && totalOvertime > 0) ? (
+                                                    <div className="flex flex-col items-center justify-center h-full w-full summary-split" style={{ minHeight: '38px' }}>
+                                                        <div className="flex-1 flex items-center justify-center w-full border-b border-gray-200 text-purple-700 font-bold text-[10px] bg-purple-50">
+                                                            P: {totalPermit}
+                                                        </div>
+                                                        <div className="flex-1 flex items-center justify-center w-full text-orange-700 font-bold text-[10px] bg-orange-50">
+                                                            S: {totalOvertime}
+                                                        </div>
+                                                    </div>
+                                                ) : (
+                                                    <div className="flex items-center justify-center h-full w-full p-2">
+                                                        {totalPermit > 0 && <span className="font-bold text-xs text-purple-700 bg-purple-100 px-2 py-0.5 rounded-full border border-purple-200">P: {totalPermit}</span>}
+                                                        {totalOvertime > 0 && <span className="font-bold text-xs text-orange-700 bg-orange-100 px-2 py-0.5 rounded-full border border-orange-200">S: {totalOvertime}</span>}
+                                                        {totalPermit === 0 && totalOvertime === 0 && <span className="text-gray-200">-</span>}
+                                                    </div>
+                                                )}
                                             </td>
 
                                             {/* Totale */}
