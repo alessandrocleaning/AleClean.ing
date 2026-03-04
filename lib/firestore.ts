@@ -225,3 +225,35 @@ export const checkAndWipeOldData = async (userId: string): Promise<boolean> => {
     }
 };
 
+/**
+ * Per lo scope 'future': rimuove splitConfigs[empId] dai documenti mensili
+ * di tutti i mesi dal mese corrente incluso in avanti (fino a 24 mesi futuri).
+ * Questo fa sì che quei mesi usino il profilo globale aggiornato del dipendente.
+ */
+export const clearSplitConfigForFutureMonths = async (
+    userId: string,
+    empId: string,
+    fromMonthKey: string, // formato "YYYY-MM"
+    monthsAhead: number = 24
+): Promise<void> => {
+    const [year, month] = fromMonthKey.split('-').map(Number);
+    const promises: Promise<void>[] = [];
+
+    for (let i = 0; i < monthsAhead; i++) {
+        const d = new Date(year, month - 1 + i, 1);
+        const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+        const ref = doc(db, 'users', userId, 'monthly', key);
+        promises.push(
+            getDoc(ref).then(snap => {
+                if (!snap.exists()) return Promise.resolve();
+                const data = snap.data() as MonthlyData;
+                if (!data.splitConfigs || !(empId in data.splitConfigs)) return Promise.resolve();
+                const newSplitConfigs = { ...data.splitConfigs };
+                delete newSplitConfigs[empId];
+                return setDoc(ref, { ...data, splitConfigs: newSplitConfigs });
+            })
+        );
+    }
+
+    await Promise.all(promises);
+};

@@ -14,7 +14,7 @@ interface Props {
     setEmployees: React.Dispatch<React.SetStateAction<Employee[]>>;
 }
 
-import { loadMonthlyData, saveMonthlyData, loadRecurringJobs, saveRecurringJobs } from '../lib/firestore';
+import { loadMonthlyData, saveMonthlyData, loadRecurringJobs, saveRecurringJobs, clearSplitConfigForFutureMonths } from '../lib/firestore';
 
 // --- CONSTANTS ---
 const STORAGE_PREFIX = 'cleaning_sheet_';
@@ -1197,6 +1197,9 @@ export const MonthlySheet: React.FC<Props> = ({ userId, employees, sites, setEmp
                 if (emp.id !== empId) return emp;
                 return { ...emp, splitConfig: newConfig };
             }));
+            // Rimuove la splitConfig mensile da tutti i mesi futuri in Firebase
+            // così tornano ad usare il profilo globale aggiornato
+            clearSplitConfigForFutureMonths(userId, empId, storageKeyRaw).catch(console.error);
         }
 
         setConfigModalEmp(null);
