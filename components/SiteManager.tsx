@@ -629,34 +629,52 @@ export const SiteManager: React.FC<Props> = ({ sites, setSites, employees, setEm
                                     <div className="flex flex-col md:grid md:grid-cols-[1.5fr_1.5fr_1fr_1fr] lg:grid-cols-[2fr_1.5fr_120px_1fr_1fr] gap-2 md:gap-3 w-full items-start md:items-center min-w-0">
 
                                         {/* ══════════════════════════════════════════
-                                            SU MOBILE: riga singola compatta
-                                            [Nome truncate] [Fatturato] [#Op] [✏️🗑️]
+                                            SU MOBILE: 2 righe
+                                            Riga 1: ● Nome (wrappable)
+                                            Riga 2 (right): Fatturato | #Op | ✏️ | 🗑️
                                         ══════════════════════════════════════════ */}
-                                        <div className="flex items-center gap-2 w-full min-w-0 md:hidden">
-                                            {/* NOME (occupa tutto lo spazio disponibile, troncato a 1 riga) */}
-                                            <div className="flex items-center gap-1.5 flex-1 min-w-0">
-                                                <span className="w-2 h-2 rounded-full bg-[#004aad] flex-shrink-0"></span>
-                                                <span className="font-bold text-gray-800 text-sm truncate">{site.name}</span>
+                                        <div className="flex flex-col gap-1 w-full min-w-0 md:hidden">
+                                            {/* RIGA 1 — Nome */}
+                                            <div className="flex items-start gap-1.5">
+                                                <span className="w-2 h-2 rounded-full bg-[#004aad] flex-shrink-0 mt-1.5"></span>
+                                                <span className="font-bold text-gray-800 text-sm leading-snug">{site.name}</span>
                                             </div>
 
-                                            {/* FATTURATO */}
-                                            {site.netMonthlyRevenue !== undefined && (
-                                                <div className="flex items-center gap-0.5 text-[11px] font-bold text-[#004aad] bg-blue-50 px-1.5 py-0.5 rounded border border-blue-100 whitespace-nowrap flex-shrink-0">
-                                                    <Euro className="w-3 h-3" />
-                                                    <span>{site.netMonthlyRevenue.toLocaleString('it-IT', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}€</span>
-                                                </div>
-                                            )}
-
-                                            {/* OPERATORI (numero) */}
-                                            {(() => {
-                                                const n = employees.filter(e => e.defaultAssignments.some(a => a.siteId === site.id)).length;
-                                                if (n === 0) return null;
-                                                return (
-                                                    <div className="w-5 h-5 rounded-full bg-indigo-100 text-[#004aad] font-bold text-[9px] flex items-center justify-center border border-indigo-200 flex-shrink-0">
-                                                        {n}
+                                            {/* RIGA 2 — Azioni allineate a destra */}
+                                            <div className="flex items-center justify-end gap-1.5">
+                                                {/* FATTURATO */}
+                                                {site.netMonthlyRevenue !== undefined && (
+                                                    <div className="flex items-center gap-0.5 text-[11px] font-bold text-[#004aad] bg-blue-50 px-1.5 py-0.5 rounded border border-blue-100 whitespace-nowrap">
+                                                        <Euro className="w-3 h-3" />
+                                                        <span>{site.netMonthlyRevenue.toLocaleString('it-IT', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}€</span>
                                                     </div>
-                                                );
-                                            })()}
+                                                )}
+                                                {/* OPERATORI */}
+                                                {(() => {
+                                                    const n = employees.filter(e => e.defaultAssignments.some(a => a.siteId === site.id)).length;
+                                                    if (n === 0) return null;
+                                                    return (
+                                                        <div className="w-5 h-5 rounded-full bg-indigo-100 text-[#004aad] font-bold text-[9px] flex items-center justify-center border border-indigo-200">
+                                                            {n}
+                                                        </div>
+                                                    );
+                                                })()}
+                                                {/* BOTTONI AZIONE (solo su mobile) */}
+                                                <button
+                                                    onClick={() => startEditing(site)}
+                                                    className="p-1.5 text-gray-400 hover:text-[#004aad] hover:bg-blue-50 rounded-lg transition-colors"
+                                                    title="Modifica"
+                                                >
+                                                    <Pencil className="w-3.5 h-3.5" />
+                                                </button>
+                                                <button
+                                                    onClick={(e) => { e.stopPropagation(); setDeleteId(site.id); }}
+                                                    className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                                                    title="Elimina"
+                                                >
+                                                    <Trash2 className="w-3.5 h-3.5" />
+                                                </button>
+                                            </div>
                                         </div>
 
 
@@ -724,8 +742,8 @@ export const SiteManager: React.FC<Props> = ({ sites, setSites, employees, setEm
                                 )}
                             </div>
 
-                            {/* Actions */}
-                            <div className="flex items-center gap-2 self-center">
+                            {/* Actions — nascosti su mobile (le azioni sono nella riga 2 del blocco mobile) */}
+                            <div className="hidden md:flex items-center gap-2 self-center">
                                 {isEditing ? (
                                     <>
                                         <button
@@ -762,6 +780,17 @@ export const SiteManager: React.FC<Props> = ({ sites, setSites, employees, setEm
                                     </>
                                 )}
                             </div>
+                            {/* Su mobile, i bottoni salva/annulla rimangono visibili anche in editing */}
+                            {isEditing && (
+                                <div className="flex md:hidden items-center gap-2 self-center">
+                                    <button onClick={saveEdit} className="p-2 bg-green-100 text-green-700 hover:bg-green-200 rounded-lg transition-colors" title="Salva">
+                                        <Check className="w-4 h-4" />
+                                    </button>
+                                    <button onClick={cancelEdit} className="p-2 bg-red-100 text-red-700 hover:bg-red-200 rounded-lg transition-colors" title="Annulla">
+                                        <X className="w-4 h-4" />
+                                    </button>
+                                </div>
+                            )}
                         </div>
                     );
                 })}
