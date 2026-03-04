@@ -894,12 +894,13 @@ export const EmployeeManager: React.FC<Props> = ({ employees, sites, setEmployee
                                             </div>
                                         ) : (
                                             <>
-                                                {/* Mobile/tablet: stacked layout — importo € nascosto per evitare sovrapposizione con le icone */}
-                                                <div className="flex flex-col lg:hidden">
-                                                    <h3 className="font-bold text-gray-800 text-sm leading-tight group-hover:text-[#004aad] transition-colors">{emp.firstName} {emp.lastName}</h3>
-                                                    <span className="text-xs font-medium text-gray-400 uppercase tracking-wider flex items-center gap-1">
-                                                        <Clock className="w-3 h-3" /> Contratto:
-                                                        <span className={`font-bold px-1.5 py-0.5 rounded ${isOpen ? 'bg-[#ffec09] text-black' : 'bg-gray-100 text-gray-600'}`}>{totalContractHours}h</span>
+                                                {/* Mobile/tablet: stacked layout */}
+                                                <div className="flex flex-col lg:hidden min-w-0 flex-1">
+                                                    <h3 className="font-bold text-gray-800 text-sm leading-tight group-hover:text-[#004aad] transition-colors truncate w-full">{emp.firstName} {emp.lastName}</h3>
+                                                    <span className="text-xs font-medium text-gray-400 uppercase tracking-wider flex items-center gap-1 mt-1">
+                                                        <Clock className="w-3 h-3 flex-shrink-0" />
+                                                        <span className="truncate">Contratto:</span>
+                                                        <span className={`font-bold px-1.5 py-0.5 rounded flex-shrink-0 ${isOpen ? 'bg-[#ffec09] text-black' : 'bg-gray-100 text-gray-600'}`}>{totalContractHours}h</span>
                                                     </span>
                                                 </div>
 

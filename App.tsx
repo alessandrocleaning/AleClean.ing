@@ -371,7 +371,7 @@ const App: React.FC<{ user: User; isAdmin: boolean }> = ({ user, isAdmin }) => {
       {/* SIDEBAR / NAV */}
       <nav className={`
           bg-[#004aad] text-white w-64 flex-shrink-0 flex flex-col 
-          fixed md:relative inset-y-0 left-0 z-40 shadow-xl transition-transform duration-300 md:translate-x-0 print:hidden
+          fixed md:relative inset-y-0 left-0 z-[60] shadow-xl transition-transform duration-300 md:translate-x-0 print:hidden
           ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
       `}>
         <div className="p-6 flex items-center gap-2 border-b border-white/10 hidden md:flex">
@@ -447,7 +447,7 @@ const App: React.FC<{ user: User; isAdmin: boolean }> = ({ user, isAdmin }) => {
 
       {/* MOBILE BACKDROP */}
       {isSidebarOpen && (
-        <div className="fixed inset-0 bg-black/50 z-30 md:hidden" onClick={() => setIsSidebarOpen(false)} />
+        <div className="fixed inset-0 bg-black/50 z-50 md:hidden" onClick={() => setIsSidebarOpen(false)} />
       )}
 
       {/* MAIN CONTENT Area */}
