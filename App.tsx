@@ -5,7 +5,7 @@ import { SiteManager } from './components/SiteManager';
 import { MonthlySheet } from './components/MonthlySheet';
 import { MonthlyAllowanceSheet } from './components/MonthlyAllowanceSheet';
 import { AuthScreen } from './components/AuthScreen';
-import { Users, FileText, LayoutDashboard, MapPin, Menu, X, Wallet, Building2, TrendingUp, TrendingDown, BarChart3, Activity, PieChart as PieChartIcon, LogOut, Cloud, CloudOff, Loader, Euro, Percent, Zap, Landmark, ChevronUp, ChevronDown, Minus, Edit2, Check } from 'lucide-react';
+import { Users, FileText, LayoutDashboard, MapPin, Menu, X, Wallet, Building2, TrendingUp, TrendingDown, BarChart3, Activity, PieChart as PieChartIcon, LogOut, Cloud, CloudOff, Loader, Euro, Percent, Zap, Landmark, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Minus, Edit2, Check } from 'lucide-react';
 // (Nessun seed data — ogni utente parte con dati vuoti)
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { subMonths, format } from 'date-fns';
@@ -82,6 +82,7 @@ const CHART_COLORS = [
 const App: React.FC<{ user: User; isAdmin: boolean }> = ({ user, isAdmin }) => {
   const [view, setView] = useState<ViewMode>('dashboard');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   // ─── Firestore Data Hook ───────────────────────────────────────────────────
   const {
     employees,
@@ -370,78 +371,129 @@ const App: React.FC<{ user: User; isAdmin: boolean }> = ({ user, isAdmin }) => {
 
       {/* SIDEBAR / NAV */}
       <nav className={`
-          bg-[#004aad] text-white w-64 flex-shrink-0 flex flex-col 
-          fixed md:relative inset-y-0 left-0 z-[60] shadow-xl transition-transform duration-300 md:translate-x-0 print:hidden
+          bg-[#004aad] text-white flex-shrink-0 flex flex-col 
+          fixed md:relative inset-y-0 left-0 z-[60] shadow-xl transition-all duration-300 md:translate-x-0 print:hidden
           ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+          ${isSidebarCollapsed ? 'md:w-16' : 'md:w-64'}
+          w-64
       `}>
-        <div className="p-6 flex items-center gap-2 border-b border-white/10 hidden md:flex">
-          <img src="/logo.png" alt="Logo" className="w-14 h-14 object-contain drop-shadow-md" />
-          <div className="flex flex-col w-min">
-            <h1 className="font-black text-2xl tracking-tighter leading-none">CLEAN.ING</h1>
-            <div className="flex justify-between w-full text-blue-200 text-[8px] font-bold uppercase mt-0.5 opacity-80">
-              {"MANAGEMENT SYSTEM".split('').map((char, i) => (
-                <span key={i}>{char === ' ' ? '\u00A0' : char}</span>
-              ))}
+        {/* LOGO — desktop */}
+        <div className={`border-b border-white/10 hidden md:flex items-center justify-center transition-all duration-300 ${isSidebarCollapsed ? 'p-3' : 'p-6 gap-2'}`}>
+          <img src="/logo.png" alt="Logo" className={`object-contain drop-shadow-md transition-all duration-300 ${isSidebarCollapsed ? 'w-9 h-9' : 'w-14 h-14'}`} />
+          {!isSidebarCollapsed && (
+            <div className="flex flex-col w-min overflow-hidden">
+              <h1 className="font-black text-2xl tracking-tighter leading-none">CLEAN.ING</h1>
+              <div className="flex justify-between w-full text-blue-200 text-[8px] font-bold uppercase mt-0.5 opacity-80">
+                {"MANAGEMENT SYSTEM".split('').map((char, i) => (
+                  <span key={i}>{char === ' ' ? '\u00A0' : char}</span>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
-        <div className="flex-1 p-4 space-y-2 overflow-y-auto">
+        {/* NAV ITEMS */}
+        <div className="flex-1 p-2 space-y-1 overflow-y-auto">
+          {/* Dashboard */}
+          {!isSidebarCollapsed && <div className="pt-2 pb-1 px-2 text-xs font-bold text-blue-300 uppercase tracking-wider whitespace-nowrap overflow-hidden"></div>}
           <button
             onClick={() => { setView('dashboard'); setIsSidebarOpen(false); }}
-            className={`w-full text-left px-4 py-3 rounded-lg flex items-center gap-3 font-semibold transition-all ${view === 'dashboard' ? 'bg-[#ffec09] text-black shadow-lg translate-x-1' : 'hover:bg-white/10 text-white'}`}
+            title="Dashboard"
+            className={`w-full text-left rounded-lg flex items-center font-semibold transition-all ${isSidebarCollapsed ? 'justify-center px-0 py-3' : 'px-4 py-3 gap-3'
+              } ${view === 'dashboard' ? 'bg-[#ffec09] text-black shadow-lg' : 'hover:bg-white/10 text-white'}`}
           >
-            <LayoutDashboard className="w-5 h-5" /> Dashboard
+            <LayoutDashboard className="w-5 h-5 flex-shrink-0" />
+            {!isSidebarCollapsed && <span className="truncate">Dashboard</span>}
           </button>
 
-          <div className="pt-4 pb-1 px-4 text-xs font-bold text-blue-300 uppercase tracking-wider">Gestione</div>
+          {!isSidebarCollapsed && <div className="pt-3 pb-1 px-2 text-xs font-bold text-blue-300 uppercase tracking-wider whitespace-nowrap">Gestione</div>}
+          {isSidebarCollapsed && <div className="border-t border-white/10 my-1" />}
 
           <button
             onClick={() => { setView('employees'); setIsSidebarOpen(false); }}
-            className={`w-full text-left px-4 py-3 rounded-lg flex items-center gap-3 font-semibold transition-all ${view === 'employees' ? 'bg-[#ffec09] text-black shadow-lg translate-x-1' : 'hover:bg-white/10 text-white'}`}
+            title="Dipendenti"
+            className={`w-full text-left rounded-lg flex items-center font-semibold transition-all ${isSidebarCollapsed ? 'justify-center px-0 py-3' : 'px-4 py-3 gap-3'
+              } ${view === 'employees' ? 'bg-[#ffec09] text-black shadow-lg' : 'hover:bg-white/10 text-white'}`}
           >
-            <Users className="w-5 h-5" /> Dipendenti
+            <Users className="w-5 h-5 flex-shrink-0" />
+            {!isSidebarCollapsed && <span className="truncate">Dipendenti</span>}
           </button>
 
           <button
             onClick={() => { setView('sites'); setIsSidebarOpen(false); }}
-            className={`w-full text-left px-4 py-3 rounded-lg flex items-center gap-3 font-semibold transition-all ${view === 'sites' ? 'bg-[#ffec09] text-black shadow-lg translate-x-1' : 'hover:bg-white/10 text-white'}`}
+            title="Cantieri"
+            className={`w-full text-left rounded-lg flex items-center font-semibold transition-all ${isSidebarCollapsed ? 'justify-center px-0 py-3' : 'px-4 py-3 gap-3'
+              } ${view === 'sites' ? 'bg-[#ffec09] text-black shadow-lg' : 'hover:bg-white/10 text-white'}`}
           >
-            <MapPin className="w-5 h-5" /> Cantieri
+            <MapPin className="w-5 h-5 flex-shrink-0" />
+            {!isSidebarCollapsed && <span className="truncate">Cantieri</span>}
           </button>
 
-          <div className="pt-4 pb-1 px-4 text-xs font-bold text-blue-300 uppercase tracking-wider">Strumenti</div>
+          {!isSidebarCollapsed && <div className="pt-3 pb-1 px-2 text-xs font-bold text-blue-300 uppercase tracking-wider whitespace-nowrap">Strumenti</div>}
+          {isSidebarCollapsed && <div className="border-t border-white/10 my-1" />}
 
           <button
             onClick={() => { setView('generator'); setIsSidebarOpen(false); }}
-            className={`w-full text-left px-4 py-3 rounded-lg flex items-center gap-3 font-semibold transition-all ${view === 'generator' ? 'bg-[#ffec09] text-black shadow-lg translate-x-1' : 'hover:bg-white/10 text-white'}`}
+            title="Generatore Mensile"
+            className={`w-full text-left rounded-lg flex items-center font-semibold transition-all ${isSidebarCollapsed ? 'justify-center px-0 py-3' : 'px-4 py-3 gap-3'
+              } ${view === 'generator' ? 'bg-[#ffec09] text-black shadow-lg' : 'hover:bg-white/10 text-white'}`}
           >
-            <FileText className="w-5 h-5" /> Generatore Mensile
+            <FileText className="w-5 h-5 flex-shrink-0" />
+            {!isSidebarCollapsed && <span className="truncate">Generatore Mensile</span>}
           </button>
 
-          <div className="pt-4 pb-1 px-4 text-xs font-bold text-blue-300 uppercase tracking-wider">Amministrazione</div>
+          {!isSidebarCollapsed && <div className="pt-3 pb-1 px-2 text-xs font-bold text-blue-300 uppercase tracking-wider whitespace-nowrap">Amministrazione</div>}
+          {isSidebarCollapsed && <div className="border-t border-white/10 my-1" />}
 
           <button
             onClick={() => { setView('allowances'); setIsSidebarOpen(false); }}
-            className={`w-full text-left px-4 py-3 rounded-lg flex items-center gap-3 font-semibold transition-all ${view === 'allowances' ? 'bg-[#ffec09] text-black shadow-lg translate-x-1' : 'hover:bg-white/10 text-white'}`}
+            title="Cedolini"
+            className={`w-full text-left rounded-lg flex items-center font-semibold transition-all ${isSidebarCollapsed ? 'justify-center px-0 py-3' : 'px-4 py-3 gap-3'
+              } ${view === 'allowances' ? 'bg-[#ffec09] text-black shadow-lg' : 'hover:bg-white/10 text-white'}`}
           >
-            <Wallet className="w-5 h-5" /> Cedolini
+            <Wallet className="w-5 h-5 flex-shrink-0" />
+            {!isSidebarCollapsed && <span className="truncate">Cedolini</span>}
           </button>
-
         </div>
 
-        <div className="p-4 border-t border-white/10 hidden md:flex flex-col gap-2">
-          <SyncIndicator />
-          <div className="text-xs text-blue-200/60">
-            <p className="font-medium truncate">{user.email}</p>
-            <p className="opacity-60">v2.1.0 Cloud</p>
-          </div>
+        {/* FOOTER — desktop only */}
+        <div className="border-t border-white/10 hidden md:flex flex-col">
+          {/* Pulsante collassa/espandi */}
           <button
-            onClick={handleLogout}
-            className="flex items-center gap-2 text-xs text-red-300 hover:text-red-200 transition-colors mt-1"
+            onClick={() => setIsSidebarCollapsed(prev => !prev)}
+            className="flex items-center justify-center py-2 hover:bg-white/10 transition-colors"
+            title={isSidebarCollapsed ? 'Espandi barra' : 'Comprimi barra'}
           >
-            <LogOut className="w-3.5 h-3.5" /> Esci dall'account
+            {isSidebarCollapsed
+              ? <ChevronRight className="w-4 h-4 text-blue-200" />
+              : <ChevronLeft className="w-4 h-4 text-blue-200" />}
           </button>
+          {/* Info utente e logout — nascosti se collassata */}
+          {!isSidebarCollapsed && (
+            <div className="p-4 flex flex-col gap-2">
+              <SyncIndicator />
+              <div className="text-xs text-blue-200/60">
+                <p className="font-medium truncate">{user.email}</p>
+                <p className="opacity-60">v2.1.0 Cloud</p>
+              </div>
+              <button
+                onClick={handleLogout}
+                className="flex items-center gap-2 text-xs text-red-300 hover:text-red-200 transition-colors mt-1"
+              >
+                <LogOut className="w-3.5 h-3.5" /> Esci dall'account
+              </button>
+            </div>
+          )}
+          {/* Logout solo icona se collassata */}
+          {isSidebarCollapsed && (
+            <button
+              onClick={handleLogout}
+              title="Esci dall'account"
+              className="flex items-center justify-center py-2 text-red-300 hover:text-red-200 hover:bg-white/10 transition-colors"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
+          )}
         </div>
       </nav>
 
