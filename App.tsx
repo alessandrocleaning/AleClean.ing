@@ -378,7 +378,7 @@ const App: React.FC<{ user: User; isAdmin: boolean }> = ({ user, isAdmin }) => {
           w-64
       `}>
         {/* LOGO — desktop */}
-        <div className={`border-b border-white/10 hidden md:flex items-center justify-center transition-all duration-300 ${isSidebarCollapsed ? 'p-3' : 'p-6 gap-2'}`}>
+        <div className={`border-b border-white/10 hidden md:flex items-center justify-center relative group transition-all duration-300 ${isSidebarCollapsed ? 'p-3' : 'p-6 gap-2'}`}>
           <img src="/logo.png" alt="Logo" className={`object-contain drop-shadow-md transition-all duration-300 ${isSidebarCollapsed ? 'w-9 h-9' : 'w-14 h-14'}`} />
           {!isSidebarCollapsed && (
             <div className="flex flex-col w-min overflow-hidden">
@@ -390,6 +390,16 @@ const App: React.FC<{ user: User; isAdmin: boolean }> = ({ user, isAdmin }) => {
               </div>
             </div>
           )}
+          {/* Toggle collassa/espandi — appare sul bordo destro al hover */}
+          <button
+            onClick={() => setIsSidebarCollapsed(prev => !prev)}
+            title={isSidebarCollapsed ? 'Espandi barra' : 'Comprimi barra'}
+            className="absolute -right-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-white text-[#004aad] shadow-md border border-blue-100 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-10 hover:bg-blue-50"
+          >
+            {isSidebarCollapsed
+              ? <ChevronRight className="w-3.5 h-3.5" />
+              : <ChevronLeft className="w-3.5 h-3.5" />}
+          </button>
         </div>
 
         {/* NAV ITEMS */}
@@ -458,17 +468,6 @@ const App: React.FC<{ user: User; isAdmin: boolean }> = ({ user, isAdmin }) => {
 
         {/* FOOTER — desktop only */}
         <div className="border-t border-white/10 hidden md:flex flex-col">
-          {/* Pulsante collassa/espandi */}
-          <button
-            onClick={() => setIsSidebarCollapsed(prev => !prev)}
-            className="flex items-center justify-center py-2 hover:bg-white/10 transition-colors"
-            title={isSidebarCollapsed ? 'Espandi barra' : 'Comprimi barra'}
-          >
-            {isSidebarCollapsed
-              ? <ChevronRight className="w-4 h-4 text-blue-200" />
-              : <ChevronLeft className="w-4 h-4 text-blue-200" />}
-          </button>
-          {/* Info utente e logout — nascosti se collassata */}
           {!isSidebarCollapsed && (
             <div className="p-4 flex flex-col gap-2">
               <SyncIndicator />
@@ -484,12 +483,11 @@ const App: React.FC<{ user: User; isAdmin: boolean }> = ({ user, isAdmin }) => {
               </button>
             </div>
           )}
-          {/* Logout solo icona se collassata */}
           {isSidebarCollapsed && (
             <button
               onClick={handleLogout}
               title="Esci dall'account"
-              className="flex items-center justify-center py-2 text-red-300 hover:text-red-200 hover:bg-white/10 transition-colors"
+              className="flex items-center justify-center py-3 text-red-300 hover:text-red-200 hover:bg-white/10 transition-colors"
             >
               <LogOut className="w-4 h-4" />
             </button>
