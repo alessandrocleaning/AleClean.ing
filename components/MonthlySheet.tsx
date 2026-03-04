@@ -370,7 +370,7 @@ const TimeEntryModal = ({ employee, year, month, daysInMonth, currentOverrides, 
 // --- SUB-COMPONENT: SPLIT CONFIG MODAL ---
 interface SplitConfigModalProps {
     employee: Employee;
-    onSave: (config: SplitConfig) => void;
+    onSave: (config: SplitConfig, scope: 'month' | 'future') => void;
     onClose: () => void;
 }
 
@@ -382,12 +382,19 @@ const SplitConfigModal = ({ employee, onSave, onClose }: SplitConfigModalProps) 
         expensesMode: 'NONE', expensesValue: 0
     });
 
+    const [showScopeDialog, setShowScopeDialog] = useState(false);
+
     const updateLocal = (field: keyof SplitConfig, value: any) => {
         setLocalConfig(prev => ({ ...prev, [field]: value }));
     };
 
     const handleSave = () => {
-        onSave(localConfig);
+        // Mostra prima il dialog di scelta scope
+        setShowScopeDialog(true);
+    };
+
+    const handleConfirmScope = (scope: 'month' | 'future') => {
+        onSave(localConfig, scope);
     };
 
     const renderCard = (
@@ -539,14 +546,48 @@ const SplitConfigModal = ({ employee, onSave, onClose }: SplitConfigModalProps) 
                 </div>
 
                 {/* Footer */}
-                <div className="p-4 bg-white border-t border-gray-100 flex justify-end items-center flex-shrink-0 gap-3">
-                    <button onClick={onClose} className="text-gray-500 font-bold px-4 py-2 hover:bg-gray-100 rounded-lg transition-colors text-sm">
-                        Annulla
-                    </button>
-                    <button onClick={handleSave} className="bg-[#004aad] text-white px-8 py-2.5 rounded-xl font-bold hover:bg-[#003580] shadow-lg transform active:scale-95 transition-all text-sm flex items-center gap-2">
-                        <Save className="w-4 h-4" />
-                        Salva e Chiudi
-                    </button>
+                <div className="p-4 bg-white border-t border-gray-100 flex-shrink-0">
+                    {showScopeDialog ? (
+                        /* ── Dialog scelta scope ── */
+                        <div className="space-y-3">
+                            <p className="text-sm font-bold text-gray-700 text-center">Applica questa modifica a:</p>
+                            <div className="grid grid-cols-2 gap-3">
+                                <button
+                                    onClick={() => handleConfirmScope('month')}
+                                    className="flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 border-blue-200 bg-blue-50 hover:bg-blue-100 text-blue-700 transition-all"
+                                >
+                                    <span className="text-xl">📅</span>
+                                    <span className="text-xs font-black uppercase tracking-wide">Solo questo mese</span>
+                                    <span className="text-[10px] text-blue-400 font-medium">I mesi precedenti e successivi<br />restano invariati</span>
+                                </button>
+                                <button
+                                    onClick={() => handleConfirmScope('future')}
+                                    className="flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 border-emerald-200 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 transition-all"
+                                >
+                                    <span className="text-xl">🔄</span>
+                                    <span className="text-xs font-black uppercase tracking-wide">Questo e futuri</span>
+                                    <span className="text-[10px] text-emerald-400 font-medium">I mesi precedenti restano<br />invariati, i futuri ereditano</span>
+                                </button>
+                            </div>
+                            <button
+                                onClick={() => setShowScopeDialog(false)}
+                                className="w-full text-gray-400 text-xs font-medium hover:text-gray-600 pt-1 transition-colors"
+                            >
+                                ← Torna indietro
+                            </button>
+                        </div>
+                    ) : (
+                        /* ── Footer normale ── */
+                        <div className="flex justify-end items-center gap-3">
+                            <button onClick={onClose} className="text-gray-500 font-bold px-4 py-2 hover:bg-gray-100 rounded-lg transition-colors text-sm">
+                                Annulla
+                            </button>
+                            <button onClick={handleSave} className="bg-[#004aad] text-white px-8 py-2.5 rounded-xl font-bold hover:bg-[#003580] shadow-lg transform active:scale-95 transition-all text-sm flex items-center gap-2">
+                                <Save className="w-4 h-4" />
+                                Salva e Chiudi
+                            </button>
+                        </div>
+                    )}
                 </div>
             </div>
         </div>
@@ -1135,10 +1176,11 @@ export const MonthlySheet: React.FC<Props> = ({ userId, employees, sites, setEmp
     const goToNextMonth = () => setCurrentDate(prev => addMonths(prev, 1));
 
     // Saving the full split config manually
-    const handleSaveSplitConfig = (newConfig: SplitConfig) => {
+    const handleSaveSplitConfig = (newConfig: SplitConfig, scope: 'month' | 'future') => {
         if (!configModalEmp) return;
         const empId = configModalEmp.id;
-        // Salva la splitConfig solo per il mese corrente, non globalmente sul dipendente
+
+        // Salva sempre per il mese corrente
         setMonthlyData(prev => {
             const newData = {
                 ...prev,
@@ -1147,6 +1189,16 @@ export const MonthlySheet: React.FC<Props> = ({ userId, employees, sites, setEmp
             syncToCloud(storageKeyRaw, newData);
             return newData;
         });
+
+        // Se 'future': aggiorna anche il profilo globale del dipendente
+        // così i mesi futuri (senza splitConfig mensile propria) erediteranno la nuova config
+        if (scope === 'future') {
+            setEmployees(prev => prev.map(emp => {
+                if (emp.id !== empId) return emp;
+                return { ...emp, splitConfig: newConfig };
+            }));
+        }
+
         setConfigModalEmp(null);
     };
 
