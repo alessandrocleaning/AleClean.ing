@@ -994,10 +994,10 @@ export const MonthlySheet: React.FC<Props> = ({ userId, employees, sites, setEmp
 
                 if (existing) {
                     newRecurring[empId] = list.map(j =>
-                        j.id === job.id ? { ...j, endMonth: undefined, isLocked: true } : j
+                        j.id === job.id ? { ...j, startMonth: storageKeyRaw, endMonth: undefined, isLocked: true } : j
                     );
                 } else {
-                    const lockedJob: ExtraJob = { ...job, isLocked: true, startMonth: storageKeyRaw, endMonth: undefined, value: 0, hours: {} };
+                    const lockedJob: ExtraJob = { id: job.id, description: job.description, isLocked: true, startMonth: storageKeyRaw, endMonth: undefined, value: 0, hours: {} };
                     newRecurring[empId] = [...list, lockedJob];
                 }
                 syncRecurringToCloud(newRecurring);
