@@ -815,14 +815,35 @@ export const MonthlySheet: React.FC<Props> = ({ userId, employees, sites, setEmp
 
                 // Fetch global recurring jobs
                 const fetchedRecurring = await loadRecurringJobs(userId);
+
                 if (isMounted) {
                     setRecurringJobs(fetchedRecurring);
+
+                    // Auto-expand employees that have visible extra jobs in this month
+                    const newExpanded = new Set<string>();
+
+                    employees.forEach(emp => {
+                        const monthlyJobIds = fetchedData?.extraJobs?.[emp.id] ? fetchedData.extraJobs[emp.id].map(j => j.id) : [];
+                        const empRecurring = fetchedRecurring[emp.id] || [];
+                        const visibleRecurring = empRecurring.filter(job =>
+                            (!job.startMonth || job.startMonth <= storageKeyRaw) &&
+                            (!job.endMonth || job.endMonth >= storageKeyRaw)
+                        );
+
+                        const hasVisibleJobs = monthlyJobIds.length > 0 || visibleRecurring.some(j => !monthlyJobIds.includes(j.id));
+                        if (hasVisibleJobs) {
+                            newExpanded.add(emp.id);
+                        }
+                    });
+
+                    setExpandedEmpIds(newExpanded);
                 }
             } catch (e) {
                 console.error("Failed to load monthly data from Firestore", e);
                 if (isMounted) {
                     setMonthlyData({ overrides: {}, notes: {}, splits: {}, extraJobs: {}, salaryTarget: {}, salaryMode: {}, sickLeaveCodes: {} });
                     setRecurringJobs({});
+                    setExpandedEmpIds(new Set());
                 }
             } finally {
                 if (isMounted) setIsGenerating(false);
