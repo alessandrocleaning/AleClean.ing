@@ -931,47 +931,70 @@ export const MonthlySheet: React.FC<Props> = ({ userId, employees, sites, setEmp
 
     const toggleJobLock = (empId: string, job: ExtraJob) => {
         if (job.isLocked) {
-            // UNLOCK: Move from Recurring to Monthly (for this month)
+            // UNLOCK (sblocca la ricorrenza dal mese corrente in poi)
 
-            // 1. Remove from Recurring
+            // 1. Aggiorna il job ricorrente globale impostando 'endMonth' al mese corrente
+            // In questo modo sarà visibile e sbloccato questo mese, ma non nei successivi
             setRecurringJobs(prev => {
                 const newRecurring = { ...prev };
-                newRecurring[empId] = (newRecurring[empId] || []).filter(j => j.id !== job.id);
+                newRecurring[empId] = (newRecurring[empId] || []).map(j =>
+                    j.id === job.id ? { ...j, endMonth: storageKeyRaw } : j
+                );
                 syncRecurringToCloud(newRecurring);
                 return newRecurring;
             });
 
-            // 2. Add to Monthly
+            // 2. Crea o aggiorna la copia locale nel mese corrente con isLocked: false
             setMonthlyData(prev => {
                 const currentExtras = prev.extraJobs?.[empId] || [];
-                const unlockedJob = { ...job, isLocked: false, startMonth: undefined };
+                // Se esiste la aggiorno, se non esiste la aggiungo (di norma l'utente clicca su un job visibile)
+                const exists = currentExtras.some(j => j.id === job.id);
+                const updatedExtras = exists
+                    ? currentExtras.map(j => j.id === job.id ? { ...j, isLocked: false } : j)
+                    : [...currentExtras, { ...job, isLocked: false }];
+
                 const newData = {
                     ...prev,
-                    extraJobs: { ...prev.extraJobs, [empId]: [...currentExtras, unlockedJob] }
+                    extraJobs: { ...prev.extraJobs, [empId]: updatedExtras }
                 };
                 syncToCloud(storageKeyRaw, newData);
                 return newData;
             });
 
         } else {
-            // LOCK: Move from Monthly to Recurring
+            // LOCK (attiva o riattiva la ricorrenza dal mese corrente in poi)
 
-            // 1. Add to Recurring
+            // 1. Aggiorna o crea il job ricorrente globale
+            // ATTENZIONE: le ore e il valore non passano al job globale (restano vuoti per i mesi futuri)
             setRecurringJobs(prev => {
                 const newRecurring = { ...prev };
-                const lockedJob = { ...job, isLocked: true, startMonth: storageKeyRaw };
-                newRecurring[empId] = [...(newRecurring[empId] || []), lockedJob];
+                const list = newRecurring[empId] || [];
+                const existing = list.find(j => j.id === job.id);
+
+                if (existing) {
+                    newRecurring[empId] = list.map(j =>
+                        j.id === job.id ? { ...j, endMonth: undefined, isLocked: true } : j
+                    );
+                } else {
+                    const lockedJob: ExtraJob = { ...job, isLocked: true, startMonth: storageKeyRaw, endMonth: undefined, value: 0, hours: {} };
+                    newRecurring[empId] = [...list, lockedJob];
+                }
                 syncRecurringToCloud(newRecurring);
                 return newRecurring;
             });
 
-            // 2. Remove from Monthly
+            // 2. Crea o aggiorna la copia locale nel mese corrente con isLocked: true
+            // per mantenere i dati che l'utente aveva appena inserito o modificato in questo mese
             setMonthlyData(prev => {
                 const currentExtras = prev.extraJobs?.[empId] || [];
-                const filteredExtras = currentExtras.filter(j => j.id !== job.id);
+                const exists = currentExtras.some(j => j.id === job.id);
+                const updatedExtras = exists
+                    ? currentExtras.map(j => j.id === job.id ? { ...j, isLocked: true } : j)
+                    : [...currentExtras, { ...job, isLocked: true }];
+
                 const newData = {
                     ...prev,
-                    extraJobs: { ...prev.extraJobs, [empId]: filteredExtras }
+                    extraJobs: { ...prev.extraJobs, [empId]: updatedExtras }
                 };
                 syncToCloud(storageKeyRaw, newData);
                 return newData;
@@ -997,8 +1020,8 @@ export const MonthlySheet: React.FC<Props> = ({ userId, employees, sites, setEmp
             if (existingLocalCopy) {
                 updatedExtras = currentMonthlyExtras.map(j => j.id === jobId ? applyFn(j) : j);
             } else {
-                // Prima modifica: partenza dal job ricorrente globale, già con isLocked: false
-                const localBase: ExtraJob = { ...recurringJob, isLocked: false, startMonth: undefined };
+                // Prima modifica: partenza dal job ricorrente globale, mantenendo isLocked (lucchetto chiuso)
+                const localBase: ExtraJob = { ...recurringJob, startMonth: undefined, endMonth: undefined };
                 updatedExtras = [...currentMonthlyExtras, applyFn(localBase)];
             }
 
@@ -1880,7 +1903,10 @@ export const MonthlySheet: React.FC<Props> = ({ userId, employees, sites, setEmp
 
                                 const empRecurring = recurringJobs[emp.id] || [];
                                 const empMonthly = monthlyData.extraJobs?.[emp.id] || [];
-                                const visibleRecurring = empRecurring.filter(job => !job.startMonth || job.startMonth <= storageKeyRaw);
+                                const visibleRecurring = empRecurring.filter(job =>
+                                    (!job.startMonth || job.startMonth <= storageKeyRaw) &&
+                                    (!job.endMonth || job.endMonth >= storageKeyRaw)
+                                );
                                 // La copia locale mensile ha precedenza sul job ricorrente con lo stesso id
                                 const localOverrideIds = new Set(empMonthly.map(j => j.id));
                                 const extraJobs = [...empMonthly, ...visibleRecurring.filter(j => !localOverrideIds.has(j.id))];

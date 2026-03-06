@@ -90,6 +90,7 @@ export interface ExtraJob {
   // Locking logic for recurring extra jobs
   isLocked?: boolean;
   startMonth?: string; // YYYY-MM when it was locked/started
+  endMonth?: string;   // YYYY-MM when it was unlocked (shows up to this month)
 }
 
 export interface MonthlyData {
