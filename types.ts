@@ -121,4 +121,4 @@ export interface DailyRecord {
   details?: { siteId: string; hours: number }[]; // Snapshot details
 }
 
-export type ViewMode = 'dashboard' | 'employees' | 'sites' | 'generator' | 'allowances';
+export type ViewMode = 'dashboard' | 'employees' | 'sites' | 'generator' | 'analisi' | 'allowances';

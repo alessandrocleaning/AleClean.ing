@@ -883,7 +883,7 @@ export const EmployeeManager: React.FC<Props> = ({ employees, sites, setEmployee
                                     {isDraggable && <div className="mr-3 text-gray-300 group-hover:text-[#004aad] cursor-grab active:cursor-grabbing transition-colors"><GripVertical className="w-5 h-5" /></div>}
 
                                     <div className="flex items-center gap-3 flex-1 min-w-0">
-                                        <div className={`w-9 h-9 rounded-lg flex items-center justify-center text-sm font-black flex-shrink-0 shadow-sm transition-all ${isOpen ? 'bg-[#004aad] text-white rotate-3 scale-110' : 'bg-gray-100 text-gray-500 group-hover:bg-blue-50 group-hover:text-[#004aad]'}`}>
+                                        <div className={`w-9 h-9 rounded-lg flex items-center justify-center text-sm font-black flex-shrink-0 shadow-sm transition-all ${isOpen ? 'bg-gradient-to-br from-[#004aad] to-blue-600 text-white rotate-3 scale-110' : 'bg-gradient-to-br from-[#004aad] to-blue-600 text-white opacity-90 group-hover:opacity-100 hover:shadow-md'}`}>
                                             {emp.firstName.charAt(0)}{emp.lastName.charAt(0)}
                                         </div>
 

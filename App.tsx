@@ -4,8 +4,9 @@ import { EmployeeManager } from './components/EmployeeManager';
 import { SiteManager } from './components/SiteManager';
 import { MonthlySheet } from './components/MonthlySheet';
 import { MonthlyAllowanceSheet } from './components/MonthlyAllowanceSheet';
+import { CostAnalysis } from './components/CostAnalysis';
 import { AuthScreen } from './components/AuthScreen';
-import { Users, FileText, LayoutDashboard, MapPin, Menu, X, Wallet, Building2, TrendingUp, TrendingDown, BarChart3, Activity, PieChart as PieChartIcon, LogOut, Cloud, CloudOff, Loader, Euro, Percent, Zap, Landmark, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Minus, Edit2, Check } from 'lucide-react';
+import { Users, FileText, LayoutDashboard, MapPin, Menu, X, Wallet, Building2, TrendingUp, TrendingDown, BarChart3, Activity, PieChart as PieChartIcon, LogOut, Cloud, CloudOff, Loader, Euro, Percent, Zap, Landmark, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Minus, Edit2, Check, Calculator } from 'lucide-react';
 // (Nessun seed data — ogni utente parte con dati vuoti)
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { subMonths, format } from 'date-fns';
@@ -32,7 +33,7 @@ const AuthWrapper: React.FC = () => {
 
   if (authLoading) {
     return (
-      <div className="min-h-screen bg-[#004aad] flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-[#004aad] to-blue-600 flex items-center justify-center">
         <div className="text-center text-white">
           <img src="/logo.png" alt="Clean.ing Logo" className="w-20 h-20 object-contain drop-shadow-xl mx-auto mb-4 animate-pulse" />
           <div className="w-8 h-8 border-2 border-white/30 border-t-white rounded-full animate-spin mx-auto" />
@@ -43,10 +44,9 @@ const AuthWrapper: React.FC = () => {
 
   if (!user) return <AuthScreen />;
 
-  // Blocca tutti tranne l'email autorizzata
   if (user.email?.toLowerCase() !== AUTHORIZED_EMAIL) {
     return (
-      <div className="min-h-screen bg-[#004aad] flex items-center justify-center p-4">
+      <div className="min-h-screen bg-gradient-to-br from-[#004aad] to-blue-600 flex items-center justify-center p-4">
         <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-sm w-full text-center">
           <img src="/logo.png" alt="Logo" className="w-16 h-16 object-contain mx-auto mb-4" />
           <div className="w-14 h-14 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -59,7 +59,7 @@ const AuthWrapper: React.FC = () => {
           <p className="text-xs text-gray-400 bg-gray-50 rounded-lg px-3 py-2 mb-6 font-mono break-all">{user.email}</p>
           <button
             onClick={() => signOut(auth)}
-            className="w-full bg-[#004aad] text-white font-bold py-3 rounded-xl hover:bg-blue-700 transition-colors"
+            className="w-full bg-gradient-to-br from-[#004aad] to-blue-600 hover:from-[#003580] hover:to-blue-700 text-white font-bold py-3 rounded-xl transition-colors shadow-md"
           >
             Esci e cambia account
           </button>
@@ -359,7 +359,7 @@ const App: React.FC<{ user: User; isAdmin: boolean }> = ({ user, isAdmin }) => {
     <div className="h-screen w-full bg-gray-50 flex flex-col md:flex-row overflow-hidden">
 
       {/* MOBILE HEADER */}
-      <div className="md:hidden bg-[#004aad] text-white p-4 flex justify-between items-center shadow-md flex-shrink-0 z-50 print:hidden">
+      <div className="md:hidden bg-gradient-to-br from-[#004aad] to-blue-600 text-white p-4 flex justify-between items-center shadow-md flex-shrink-0 z-50 print:hidden">
         <div className="flex items-center gap-2">
           <img src="/logo.png" alt="Logo" className="w-10 h-10 object-contain drop-shadow-md" />
           <span className="font-bold text-lg">CLEAN.ING</span>
@@ -371,7 +371,7 @@ const App: React.FC<{ user: User; isAdmin: boolean }> = ({ user, isAdmin }) => {
 
       {/* SIDEBAR / NAV */}
       <nav className={`
-          bg-[#004aad] text-white flex-shrink-0 flex flex-col 
+          bg-gradient-to-br from-[#004aad] to-blue-600 text-white flex-shrink-0 flex flex-col 
           fixed md:relative inset-y-0 left-0 z-[60] shadow-xl transition-all duration-300 md:translate-x-0 print:hidden
           ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
           ${isSidebarCollapsed ? 'md:w-16' : 'md:w-64'}
@@ -450,6 +450,16 @@ const App: React.FC<{ user: User; isAdmin: boolean }> = ({ user, isAdmin }) => {
           >
             <FileText className="w-5 h-5 flex-shrink-0" />
             {!isSidebarCollapsed && <span className="truncate">Generatore Mensile</span>}
+          </button>
+
+          <button
+            onClick={() => { setView('analisi'); setIsSidebarOpen(false); }}
+            title="Analisi Costi"
+            className={`w-full text-left rounded-lg flex items-center font-semibold transition-all ${isSidebarCollapsed ? 'justify-center px-0 py-3' : 'px-4 py-3 gap-3'
+              } ${view === 'analisi' ? 'bg-[#ffec09] text-black shadow-lg' : 'hover:bg-white/10 text-white'}`}
+          >
+            <Calculator className="w-5 h-5 flex-shrink-0" />
+            {!isSidebarCollapsed && <span className="truncate">Analisi</span>}
           </button>
 
           {!isSidebarCollapsed && <div className="pt-3 pb-1 px-2 text-xs font-bold text-blue-300 uppercase tracking-wider whitespace-nowrap">Amministrazione</div>}
@@ -934,6 +944,15 @@ const App: React.FC<{ user: User; isAdmin: boolean }> = ({ user, isAdmin }) => {
               employees={employees}
               sites={sites}
               setEmployees={setEmployees}
+            />
+          )}
+
+          {/* VIEW: ANALISI */}
+          {view === 'analisi' && (
+            <CostAnalysis
+              userId={user.uid}
+              employees={employees}
+              sites={sites}
             />
           )}
 

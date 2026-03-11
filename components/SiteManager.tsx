@@ -56,7 +56,7 @@ const AddSiteModal = ({
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
             <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-fade-in-up">
-                <div className="bg-[#004aad] p-6 text-white flex justify-between items-start">
+                <div className="bg-gradient-to-br from-[#004aad] to-blue-600 p-6 text-white flex justify-between items-start">
                     <div>
                         <h3 className="text-xl font-bold flex items-center gap-2">
                             <Building2 className="w-6 h-6 text-[#ffec09]" /> Nuovo Cantiere
@@ -147,7 +147,7 @@ const AddSiteModal = ({
                         <button
                             type="submit"
                             disabled={!name.trim()}
-                            className="flex-1 py-3 bg-[#004aad] text-white font-bold rounded-xl hover:bg-[#003580] shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all transform active:scale-95"
+                            className="flex-1 py-3 bg-gradient-to-br from-[#004aad] to-blue-600 text-white font-bold rounded-xl hover:from-[#003580] hover:to-blue-700 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all transform active:scale-95"
                         >
                             Crea Cantiere
                         </button>
@@ -377,7 +377,7 @@ export const SiteManager: React.FC<Props> = ({ sites, setSites, employees, setEm
                 </div>
                 <button
                     onClick={() => setIsAddModalOpen(true)}
-                    className="bg-[#004aad] text-white pl-4 pr-6 py-3 rounded-xl hover:bg-[#003580] font-bold shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-0.5 flex items-center gap-2 group"
+                    className="bg-gradient-to-br from-[#004aad] to-blue-600 text-white pl-4 pr-6 py-3 rounded-xl hover:from-[#003580] hover:to-blue-700 font-bold shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-0.5 flex items-center gap-2 group"
                 >
                     <div className="bg-white/20 p-1 rounded-lg group-hover:bg-white/30 transition-colors">
                         <Plus className="w-5 h-5" />
