@@ -333,6 +333,7 @@ export const SiteManager: React.FC<Props> = ({ sites, setSites, employees, setEm
 
     return (
         <div className="space-y-8 animate-fade-in pb-20 relative">
+            <div id="sites-json-dump" style={{display: 'none'}}>{JSON.stringify(sites)}</div>
 
             <AddSiteModal
                 isOpen={isAddModalOpen}

@@ -551,9 +551,12 @@ const App: React.FC<{ user: User; isAdmin: boolean }> = ({ user, isAdmin }) => {
                   <p className="text-2xl font-black text-gray-800">
                     {stats.fatturatoMese.toLocaleString('it-IT', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} <span className="text-lg">€</span>
                   </p>
-                  <p className="text-xs text-gray-400 mt-2">
-                    Somma imponibili cantieri attivi
-                  </p>
+                  <div className="mt-2 pt-2 border-t border-gray-100 flex items-center justify-between">
+                    <span className="text-[10px] font-bold text-gray-500 uppercase">Fatturato Annuo</span>
+                    <span className="text-sm font-black text-[#004aad]">
+                      {(stats.fatturatoMese * 12).toLocaleString('it-IT', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} €
+                    </span>
+                  </div>
                   {stats.fatturatoMese === 0 && (
                     <p className="text-[10px] text-amber-500 font-semibold mt-1">⚠ Nessun ricavo configurato nei cantieri</p>
                   )}
