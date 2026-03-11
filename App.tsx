@@ -554,7 +554,7 @@ const App: React.FC<{ user: User; isAdmin: boolean }> = ({ user, isAdmin }) => {
                   <div className="mt-2 pt-2 border-t border-gray-100 flex items-center justify-between">
                     <span className="text-[10px] font-bold text-gray-500 uppercase">Fatturato Annuo</span>
                     <span className="text-sm font-black text-[#004aad]">
-                      {(Math.round(stats.fatturatoMese) * 12).toLocaleString('it-IT', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} €
+                      {(stats.fatturatoMese * 12).toLocaleString('it-IT', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} €
                     </span>
                   </div>
                   {stats.fatturatoMese === 0 && (
