@@ -551,14 +551,16 @@ const App: React.FC<{ user: User; isAdmin: boolean }> = ({ user, isAdmin }) => {
                   <p className="text-2xl font-black text-gray-800">
                     {stats.fatturatoMese.toLocaleString('it-IT', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} <span className="text-lg">€</span>
                   </p>
-                  <div className="mt-2 pt-2 border-t border-gray-100 flex items-center justify-between">
-                    <span className="text-[10px] font-bold text-gray-500 uppercase">Fatturato Annuo</span>
-                    <span className="text-sm font-black text-[#004aad]">
-                      {(stats.fatturatoMese * 12).toLocaleString('it-IT', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} €
-                    </span>
+                  <div className="mt-4 pt-4 border-t border-gray-100 flex items-center justify-between">
+                    <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Fatturato Annuo</span>
+                    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-3 py-1.5 rounded-lg border border-blue-100 shadow-sm">
+                      <span className="text-sm font-black text-blue-700">
+                        {Math.round(stats.fatturatoMese * 12).toLocaleString('it-IT', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} €
+                      </span>
+                    </div>
                   </div>
                   {stats.fatturatoMese === 0 && (
-                    <p className="text-[10px] text-amber-500 font-semibold mt-1">⚠ Nessun ricavo configurato nei cantieri</p>
+                    <p className="text-[10px] text-amber-500 font-semibold mt-2">⚠ Nessun ricavo configurato nei cantieri</p>
                   )}
                 </div>
 
