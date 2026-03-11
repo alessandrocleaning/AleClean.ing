@@ -553,8 +553,8 @@ const App: React.FC<{ user: User; isAdmin: boolean }> = ({ user, isAdmin }) => {
                   </p>
                   <div className="mt-4 pt-4 border-t border-gray-100 flex items-center justify-between">
                     <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Fatturato Annuo</span>
-                    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-3 py-1.5 rounded-lg border border-blue-100 shadow-sm">
-                      <span className="text-sm font-black text-blue-700">
+                    <div className="bg-gradient-to-r from-emerald-50 to-teal-50 px-3 py-1.5 rounded-lg border border-emerald-100 shadow-sm">
+                      <span className="text-sm font-black text-emerald-700">
                         {Math.round(stats.fatturatoMese * 12).toLocaleString('it-IT', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} €
                       </span>
                     </div>
