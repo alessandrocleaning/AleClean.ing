@@ -421,6 +421,7 @@ export const EmployeeManager: React.FC<Props> = ({ employees, sites, setEmployee
     const [empToDelete, setEmpToDelete] = useState<string | null>(null);
     const [assignToDelete, setAssignToDelete] = useState<{ empId: string, index: number } | null>(null);
     const [assignToArchive, setAssignToArchive] = useState<{ empId: string, index: number } | null>(null);
+    const [isTerminatedOpen, setIsTerminatedOpen] = useState(false);
 
     const addEmployee = (firstName: string, lastName: string, hourlyRate: number) => {
         const newEmp: Employee = {
@@ -1153,6 +1154,7 @@ export const EmployeeManager: React.FC<Props> = ({ employees, sites, setEmployee
                                                                         <span className="text-[10px] font-bold uppercase">Cedolini</span>
                                                                     </button>
 
+
                                                                     <div className="text-xs font-bold text-[#004aad] uppercase flex items-center gap-1 tracking-wider"><FileText className="w-3 h-3" /> Contratto</div>
                                                                 </div>
                                                                 {DAYS.map(day => {
@@ -1239,6 +1241,94 @@ export const EmployeeManager: React.FC<Props> = ({ employees, sites, setEmployee
                                                                     {totalEuroDifference > 0 ? '+' : ''}{totalEuroDifference.toFixed(2)} €
                                                                 </div>
                                                             </div>
+
+                                                            {/* SEZIONE: Impostazioni Contratto */}
+                                                            <div className="border-t border-dashed border-gray-200 mt-4 pt-3 pb-1">
+                                                                <div className="flex items-center justify-between">
+                                                                    <div className="flex items-center gap-2">
+                                                                        <FileText className="w-4 h-4 text-blue-500" />
+                                                                        <h5 className="text-xs font-bold text-gray-700 uppercase tracking-wider">Impostazioni Contratto</h5>
+                                                                    </div>
+                                                                </div>
+                                                                
+                                                                <div className="flex items-center gap-4 mt-3 bg-gray-50 p-3 rounded-lg border border-gray-200/60">
+                                                                    {/* Tipo di Contratto */}
+                                                                    <div className="flex flex-col gap-1 w-48">
+                                                                        <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Tipologia</label>
+                                                                        <select
+                                                                            value={emp.contractType || 'indeterminato'}
+                                                                            onChange={(e) => {
+                                                                                const type = e.target.value as ContractType;
+                                                                                setEmployees(prev => prev.map(em => {
+                                                                                    if (em.id !== emp.id) return em;
+                                                                                    const updated = { ...em, contractType: type };
+                                                                                    // Quando passo a prova, resetto le date
+                                                                                    if (type === 'prova') {
+                                                                                        updated.contractStartDate = undefined;
+                                                                                        updated.contractEndDate = undefined;
+                                                                                    }
+                                                                                    return updated;
+                                                                                }));
+                                                                            }}
+                                                                            className="text-xs font-bold border border-gray-200 rounded p-1.5 outline-none focus:ring-1 focus:ring-blue-400 bg-white"
+                                                                        >
+                                                                            <option value="indeterminato">Indeterminato</option>
+                                                                            <option value="determinato">A tempo determinato</option>
+                                                                            <option value="prova">In prova</option>
+                                                                        </select>
+                                                                    </div>
+
+                                                                    {/* Campi data, visibili solo se non in prova */}
+                                                                    {(!emp.contractType || emp.contractType !== 'prova') && (
+                                                                        <div className="flex items-center gap-4 border-l border-gray-200 pl-4">
+                                                                            
+                                                                            {/* Data Inizio */}
+                                                                            <div className="flex flex-col gap-1">
+                                                                                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Inizio Contratto</label>
+                                                                                <input
+                                                                                    type="date"
+                                                                                    value={emp.contractStartDate || ''}
+                                                                                    onChange={(e) => {
+                                                                                        const val = e.target.value || undefined;
+                                                                                        setEmployees(prev => prev.map(em => em.id === emp.id ? { ...em, contractStartDate: val } : em));
+                                                                                    }}
+                                                                                    className="text-xs font-medium border border-gray-200 rounded px-2 py-1 outline-none focus:ring-1 focus:ring-blue-400 bg-white text-gray-700"
+                                                                                />
+                                                                            </div>
+
+                                                                            {/* Data Fine */}
+                                                                            <div className="flex flex-col gap-1">
+                                                                                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">
+                                                                                    Fine Contratto {emp.contractType === 'determinato' ? '' : '(opzionale)'}
+                                                                                </label>
+                                                                                <div className="flex items-center gap-1.5">
+                                                                                    <input
+                                                                                        type="date"
+                                                                                        value={emp.contractEndDate || ''}
+                                                                                        onChange={(e) => {
+                                                                                            const val = e.target.value || undefined;
+                                                                                            setEmployees(prev => prev.map(em => em.id === emp.id ? { ...em, contractEndDate: val } : em));
+                                                                                        }}
+                                                                                        className={`text-xs font-medium border rounded px-2 py-1 outline-none focus:ring-1 bg-white
+                                                                                            ${emp.contractEndDate ? 'border-red-300 text-red-600 focus:ring-red-400' : 'border-gray-200 text-gray-700 focus:ring-blue-400'}`}
+                                                                                    />
+                                                                                    {emp.contractEndDate && (
+                                                                                        <button
+                                                                                            onClick={(e) => { e.stopPropagation(); setEmployees(prev => prev.map(em => em.id === emp.id ? { ...em, contractEndDate: undefined } : em)); }}
+                                                                                            className="text-gray-300 hover:text-red-500 transition-colors p-1"
+                                                                                            title="Rimuovi data fine contratto"
+                                                                                        >
+                                                                                            <span className="text-xs">✕</span>
+                                                                                        </button>
+                                                                                    )}
+                                                                                </div>
+                                                                            </div>
+
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+
                                                         </div>
                                                     </div>
                                                 </div>
@@ -1297,11 +1387,26 @@ export const EmployeeManager: React.FC<Props> = ({ employees, sites, setEmployee
                         );
                     };
 
+                    const today = new Date().toISOString().split('T')[0];
+                    // YYYY-MM del mese corrente usato come cutoff
+                    const currentMonthStart = today.substring(0, 7) + '-01';
+
+                    // Dipendente terminato = contractEndDate esiste ed è prima del mese corrente
+                    const terminatedEmps = filteredEmps.filter(({ emp }) =>
+                        emp.contractEndDate && emp.contractEndDate < currentMonthStart
+                    );
+                    const normalEmps = filteredEmps.filter(({ emp }) =>
+                        !emp.contractEndDate || emp.contractEndDate >= currentMonthStart
+                    );
+
+                    const normalActive = normalEmps.filter(({ emp }) => emp.showInAllowances !== false);
+                    const normalInactive = normalEmps.filter(({ emp }) => emp.showInAllowances === false);
+
                     return (
                         <>
-                            {activeEmps.map(renderEmployeeCard)}
+                            {normalActive.map(renderEmployeeCard)}
 
-                            {inactiveEmps.length > 0 && (
+                            {normalInactive.length > 0 && (
                                 <div className="py-6 flex items-center justify-center gap-4 px-4 opacity-60 mt-4 mb-2">
                                     <div className="h-px bg-gray-300 flex-1"></div>
                                     <span className="text-xs font-bold text-gray-500 uppercase tracking-widest flex items-center gap-2">
@@ -1311,7 +1416,36 @@ export const EmployeeManager: React.FC<Props> = ({ employees, sites, setEmployee
                                 </div>
                             )}
 
-                            {inactiveEmps.map(renderEmployeeCard)}
+                            {normalInactive.map(renderEmployeeCard)}
+
+                            {/* ── Sezione Contratti Terminati ── */}
+                            {terminatedEmps.length > 0 && (
+                                <div className="mt-6">
+                                    <button
+                                        onClick={() => setIsTerminatedOpen(o => !o)}
+                                        className="w-full flex items-center gap-3 px-4 py-3 bg-red-50 border border-red-200 rounded-xl hover:bg-red-100 transition-colors group"
+                                    >
+                                        <div className="flex items-center gap-2 flex-1">
+                                            <div className="w-2 h-2 rounded-full bg-red-400"></div>
+                                            <span className="text-sm font-bold text-red-700 uppercase tracking-widest">
+                                                Contratti Terminati
+                                            </span>
+                                            <span className="ml-1 bg-red-200 text-red-700 text-xs font-bold px-2 py-0.5 rounded-full">
+                                                {terminatedEmps.length}
+                                            </span>
+                                        </div>
+                                        <span className="text-red-400 text-xs font-medium">
+                                            {isTerminatedOpen ? 'Chiudi ▲' : 'Apri ▼'}
+                                        </span>
+                                    </button>
+
+                                    {isTerminatedOpen && (
+                                        <div className="mt-3 space-y-4 opacity-70">
+                                            {terminatedEmps.map(renderEmployeeCard)}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                         </>
                     );
                 })()}

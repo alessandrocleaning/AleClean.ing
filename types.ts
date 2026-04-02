@@ -47,6 +47,8 @@ export interface SplitConfig {
   expensesValue: number;
 }
 
+export type ContractType = 'determinato' | 'indeterminato' | 'prova';
+
 export interface Employee {
   id: string;
   firstName: string;
@@ -58,6 +60,11 @@ export interface Employee {
   showInAllowances?: boolean; // Toggle visibility in Allowance Sheet (Cedolini)
   defaultAssignments: Assignment[];
   splitConfig?: SplitConfig; // Configuration for auto-splitting
+  
+  // Gestione Contratti
+  contractType?: ContractType;
+  contractStartDate?: string; // YYYY-MM-DD
+  contractEndDate?: string; // YYYY-MM-DD — se impostato, il dipendente scompare dal mese successivo
 }
 
 export type AttendanceType = 'WORK' | 'FERIE' | 'MALATTIA' | 'PERMESSO' | 'ASSENZA' | 'STRAORDINARIO';

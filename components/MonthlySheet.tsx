@@ -1732,6 +1732,11 @@ export const MonthlySheet: React.FC<Props> = ({ userId, employees, sites, setEmp
 
     const getStandardHours = (emp: Employee, day: typeof daysColumns[0]) => {
         if (day.isHoliday) return 0;
+        
+        const dayString = format(day.fullDate, 'yyyy-MM-dd');
+        if (emp.contractStartDate && dayString < emp.contractStartDate) return 0;
+        if (emp.contractEndDate && dayString > emp.contractEndDate) return 0;
+
         const dayKey = day.dayKey;
 
         const activeAssignments = (emp.defaultAssignments || []).filter(a => !a.archived);
@@ -1919,7 +1924,13 @@ export const MonthlySheet: React.FC<Props> = ({ userId, employees, sites, setEmp
                             </tr>
                         </thead>
                         <tbody>
-                            {employees.map((emp, index) => {
+                            {employees.filter(emp => {
+                                if (!emp.contractEndDate) return true;
+                                // Mostra il dipendente se il contratto finisce nello stesso mese o nei mesi precedenti del corrente
+                                // Il primo giorno del mese visualizzato
+                                const monthStart = storageKeyRaw + '-01';
+                                return emp.contractEndDate >= monthStart;
+                            }).map((emp, index) => {
                                 const isEven = index % 2 === 0;
 
                                 const empRecurring = recurringJobs[emp.id] || [];

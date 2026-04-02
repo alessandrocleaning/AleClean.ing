@@ -352,14 +352,28 @@ export const MonthlyAllowanceSheet: React.FC<Props> = ({ userId, employees }) =>
     // Filter employees based on the new toggle property
     // If property is undefined, default to true for backward compatibility
     const visibleEmployees = useMemo(() => {
-        return employees.filter(e => e.showInAllowances !== false);
-    }, [employees]);
+        const monthStart = `${year}-${String(monthIndex + 1).padStart(2, '0')}-01`;
+        return employees.filter(e => {
+            if (e.showInAllowances === false) return false;
+            if (!e.contractEndDate) return true;
+            return e.contractEndDate >= monthStart;
+        });
+    }, [employees, year, monthIndex]);
 
     // --- CALCULATION LOGIC ---
 
     // NOTE: For Allowance Sheet (Cedolini), we use strictly CONTRACT HOURS for the daily grid.
     const getStandardHours = (emp: Employee, day: typeof daysColumns[0]) => {
         if (day.isHoliday) return 0;
+
+        const dayString = format(day.fullDate, 'yyyy-MM-dd');
+        
+        // Se il giorno è prima dell'inizio del contratto
+        if (emp.contractStartDate && dayString < emp.contractStartDate) return 0;
+        
+        // Se il giorno è dopo la fine del contratto
+        if (emp.contractEndDate && dayString > emp.contractEndDate) return 0;
+
         return emp.contractHours?.[day.dayKey] || 0;
     };
 
