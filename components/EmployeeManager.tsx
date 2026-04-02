@@ -1420,7 +1420,7 @@ export const EmployeeManager: React.FC<Props> = ({ employees, sites, setEmployee
 
                             {/* ── Sezione Contratti Terminati ── */}
                             {terminatedEmps.length > 0 && (
-                                <div className="mt-14">
+                                <div className="!mt-16">
                                     <button
                                         onClick={() => setIsTerminatedOpen(o => !o)}
                                         className="w-full flex items-center gap-3 px-4 py-3 bg-gray-100 border border-gray-300 rounded-xl hover:bg-gray-200 transition-colors group"
