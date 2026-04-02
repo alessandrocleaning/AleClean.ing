@@ -1420,21 +1420,21 @@ export const EmployeeManager: React.FC<Props> = ({ employees, sites, setEmployee
 
                             {/* ── Sezione Contratti Terminati ── */}
                             {terminatedEmps.length > 0 && (
-                                <div className="mt-6">
+                                <div className="mt-14">
                                     <button
                                         onClick={() => setIsTerminatedOpen(o => !o)}
-                                        className="w-full flex items-center gap-3 px-4 py-3 bg-red-50 border border-red-200 rounded-xl hover:bg-red-100 transition-colors group"
+                                        className="w-full flex items-center gap-3 px-4 py-3 bg-gray-100 border border-gray-300 rounded-xl hover:bg-gray-200 transition-colors group"
                                     >
                                         <div className="flex items-center gap-2 flex-1">
-                                            <div className="w-2 h-2 rounded-full bg-red-400"></div>
-                                            <span className="text-sm font-bold text-red-700 uppercase tracking-widest">
+                                            <div className="w-2 h-2 rounded-full bg-gray-400"></div>
+                                            <span className="text-sm font-bold text-gray-700 uppercase tracking-widest">
                                                 Contratti Terminati
                                             </span>
-                                            <span className="ml-1 bg-red-200 text-red-700 text-xs font-bold px-2 py-0.5 rounded-full">
+                                            <span className="ml-1 bg-gray-300 text-gray-800 text-xs font-bold px-2 py-0.5 rounded-full">
                                                 {terminatedEmps.length}
                                             </span>
                                         </div>
-                                        <span className="text-red-400 text-xs font-medium">
+                                        <span className="text-gray-500 text-xs font-medium">
                                             {isTerminatedOpen ? 'Chiudi ▲' : 'Apri ▼'}
                                         </span>
                                     </button>
