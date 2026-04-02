@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Employee, Site, Assignment, DayKey, AssignmentType, RecurrenceType } from '../types';
+import { Employee, Site, Assignment, DayKey, AssignmentType, RecurrenceType, ContractType } from '../types';
 import { Plus, Trash2, User, Briefcase, GripVertical, X, Pencil, Check, Search, ChevronDown, ChevronUp, Clock, FileText, Calculator, Euro, Wallet, Repeat, Calendar, Settings2, ArrowRight, PlayCircle, StopCircle, AlertCircle, Archive, MessageSquare, Copy, UserPlus, Sparkles, Target, Eye, EyeOff } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { it } from 'date-fns/locale';
