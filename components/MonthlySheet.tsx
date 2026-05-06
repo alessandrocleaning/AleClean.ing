@@ -729,7 +729,7 @@ const DayInputCell = React.memo(({ empId, dayNum, data, calculatedStandardHours,
 
     return (
         <td
-            className={`border-b border-r border-gray-200 p-0 text-center align-middle h-14 ${bgClass} relative transition-colors ${activeTool !== 'WORK' ? 'cursor-cell' : ''}`}
+            className={`border-b border-r border-gray-200 p-0 text-center align-middle h-14 ${bgClass} relative transition-colors ${activeTool !== 'WORK' ? 'cursor-cell' : ''} focus-within:ring-2 focus-within:ring-inset focus-within:ring-[#004aad] focus-within:z-10 transition-all`}
             onClick={handleClick}
         >
             {cellContent ? (
@@ -742,6 +742,7 @@ const DayInputCell = React.memo(({ empId, dayNum, data, calculatedStandardHours,
                     value={displayValue === 0 ? '' : displayValue}
                     onChange={(e) => handleInputChange(e.target.value)}
                     onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
+                    onWheel={(e) => e.currentTarget.blur()}
                     onClick={handleInputClick}
                     className={`w-full h-full text-center bg-transparent outline-none p-0 m-0 text-gray-800 ${displayValue > 0 ? 'font-bold text-base' : 'text-sm'} ${NO_SPINNER_CLASS}`}
                     placeholder={currentType === 'PERMESSO' || currentType === 'STRAORDINARIO' ? 'Ore' : ''}
@@ -789,6 +790,23 @@ export const MonthlySheet: React.FC<Props> = ({ userId, employees, sites, setEmp
     const [timeEntryModalEmpId, setTimeEntryModalEmpId] = useState<string | null>(null);
 
     const storageKeyRaw = format(currentDate, 'yyyy-MM');
+
+    const displayEmployees = useMemo(() => {
+        const monthStart = storageKeyRaw + '-01';
+        return [...employees]
+            .filter(emp => {
+                if (!emp.contractEndDate) return true;
+                return emp.contractEndDate >= monthStart;
+            })
+            .sort((a, b) => {
+                // Group by allowance status (true/undefined first, false last)
+                const aIn = a.showInAllowances !== false;
+                const bIn = b.showInAllowances !== false;
+                if (aIn !== bIn) return aIn ? -1 : 1;
+                // Sort alphabetically within group
+                return a.firstName.localeCompare(b.firstName);
+            });
+    }, [employees, storageKeyRaw]);
 
     // Load Monthly Data and Recurring Jobs from Firestore
     useEffect(() => {
@@ -1884,9 +1902,9 @@ export const MonthlySheet: React.FC<Props> = ({ userId, employees, sites, setEmp
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden print:shadow-none print:border-none">
                 <div className="overflow-auto max-h-[75vh] custom-scrollbar pb-6 print:pb-0 print:overflow-visible print:max-h-none">
                     <table id="monthly-sheet-table" className="w-full border-collapse relative">
-                        <thead className="sticky top-0 z-30 shadow-md">
+                        <thead className="sticky top-0 z-50 shadow-md">
                             <tr className="text-white">
-                                <th className={`sticky left-0 top-0 z-40 bg-[#004aad] p-4 text-left w-[220px] min-w-[220px] border-b border-white/10 border-r border-white/10 font-bold uppercase text-xs tracking-wider shadow-[4px_0_12px_-2px_rgba(0,0,0,0.3)]`}>Dipendente</th>
+                                <th className={`sticky left-0 top-0 z-50 bg-[#004aad] p-4 text-left w-[220px] min-w-[220px] border-b border-white/10 border-r border-white/10 font-bold uppercase text-xs tracking-wider shadow-[4px_0_12px_-2px_rgba(0,0,0,0.3)]`}>Dipendente</th>
                                 {!isDaysCollapsed && daysColumns.map(day => (
                                     <th key={day.dayNum} className={`p-2 min-w-[3.5rem] text-center border-b border-white/10 border-l border-white/5 ${day.isSunday || day.isHoliday ? 'bg-blue-800' : 'bg-[#004aad]'}`}>
                                         <div className="flex flex-col items-center">
@@ -1924,13 +1942,7 @@ export const MonthlySheet: React.FC<Props> = ({ userId, employees, sites, setEmp
                             </tr>
                         </thead>
                         <tbody>
-                            {employees.filter(emp => {
-                                if (!emp.contractEndDate) return true;
-                                // Mostra il dipendente se il contratto finisce nello stesso mese o nei mesi precedenti del corrente
-                                // Il primo giorno del mese visualizzato
-                                const monthStart = storageKeyRaw + '-01';
-                                return emp.contractEndDate >= monthStart;
-                            }).map((emp, index) => {
+                            {displayEmployees.map((emp, index) => {
                                 const isEven = index % 2 === 0;
 
                                 const empRecurring = recurringJobs[emp.id] || [];
@@ -1945,11 +1957,11 @@ export const MonthlySheet: React.FC<Props> = ({ userId, employees, sites, setEmp
                                 const isExpanded = expandedEmpIds.has(emp.id);
 
                                 // Separatore tra dipendenti "In Cedolini" e "Non in Cedolini"
-                                const hasAnyAllowance = employees.some(e => e.showInAllowances !== false);
-                                const hasAnyNonAllowance = employees.some(e => e.showInAllowances === false);
+                                const hasAnyAllowance = displayEmployees.some(e => e.showInAllowances !== false);
+                                const hasAnyNonAllowance = displayEmployees.some(e => e.showInAllowances === false);
                                 const isFirstNonAllowance = hasAnyAllowance && hasAnyNonAllowance
                                     && emp.showInAllowances === false
-                                    && employees.slice(0, index).every(e => e.showInAllowances !== false);
+                                    && displayEmployees.slice(0, index).every(e => e.showInAllowances !== false);
 
                                 let totalWork = 0;
                                 let totalPermit = 0;
@@ -2016,7 +2028,7 @@ export const MonthlySheet: React.FC<Props> = ({ userId, employees, sites, setEmp
                                             </tr>
                                         )}
                                         <tr className={`group ${rowBg} hover:bg-blue-50/30 transition-colors border-b border-gray-100`}>
-                                            <td className={`sticky left-0 z-10 p-0 border-r border-gray-200 font-bold text-sm text-gray-800 ${rowBg} shadow-[4px_0_12px_-2px_rgba(0,0,0,0.05)]`}>
+                                            <td className={`sticky left-0 z-30 p-0 border-r border-gray-200 font-bold text-sm text-gray-800 ${rowBg} shadow-[4px_0_12px_-2px_rgba(0,0,0,0.05)]`}>
                                                 <div className="flex items-center justify-between px-3 py-2 w-full h-full border-l-4 border-transparent hover:border-[#004aad] transition-colors relative">
                                                     <div className="flex flex-col truncate mr-2">
                                                         <span className="text-gray-900 font-black text-base truncate leading-tight mb-0.5">{emp.firstName}</span>
@@ -2101,19 +2113,19 @@ export const MonthlySheet: React.FC<Props> = ({ userId, employees, sites, setEmp
                                             </td>
 
                                             {/* Tariffa */}
-                                            <td className={`p-0 border-l-4 border-gray-50 text-center relative group/rate ${COL_W_RATE}`}>
+                                            <td className={`p-0 border-l-4 border-gray-50 text-center relative group/rate ${COL_W_RATE} focus-within:ring-2 focus-within:ring-inset focus-within:ring-[#004aad] focus-within:z-10 transition-all`}>
                                                 <div className="relative flex items-center h-full w-full">
                                                     <span className="absolute right-5 z-10 text-indigo-400 text-[10px] pointer-events-none font-bold">€</span>
-                                                    <input type="number" min="0" step="0.5" value={rate === 0 ? '' : rate} onChange={(e) => { const val = e.target.value === '' ? 0 : parseFloat(e.target.value); setEmployees(prev => prev.map(ev => ev.id === emp.id ? { ...ev, hourlyRate: val } : ev)); }} onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }} className={`w-full h-full text-right bg-transparent text-sm font-bold text-indigo-700 hover:bg-indigo-50 focus:bg-indigo-50 focus:text-indigo-900 outline-none transition-all pr-9 pl-2 ${NO_SPINNER_CLASS}`} placeholder="0" />
+                                                    <input type="number" min="0" step="0.5" value={rate === 0 ? '' : rate} onChange={(e) => { const val = e.target.value === '' ? 0 : parseFloat(e.target.value); setEmployees(prev => prev.map(ev => ev.id === emp.id ? { ...ev, hourlyRate: val } : ev)); }} onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }} onWheel={(e) => e.currentTarget.blur()} className={`w-full h-full text-right bg-transparent text-sm font-bold text-indigo-700 hover:bg-indigo-50 focus:bg-indigo-50 focus:text-indigo-900 outline-none transition-all pr-9 pl-2 ${NO_SPINNER_CLASS}`} placeholder="0" />
                                                 </div>
                                             </td>
 
                                             {/* Netto/Lordo */}
-                                            <td className={`p-0 border-gray-200 text-center relative group/target ${COL_W_TARGET}`}>
+                                            <td className={`p-0 border-gray-200 text-center relative group/target ${COL_W_TARGET} focus-within:ring-2 focus-within:ring-inset focus-within:ring-[#004aad] focus-within:z-10 transition-all`}>
                                                 <div className="relative flex items-center h-full w-full">
                                                     <button onClick={() => handleUpdateMonthlySalaryMode(emp.id)} className={`absolute right-1 z-10 text-[9px] font-black w-4 h-4 flex items-center justify-center rounded cursor-pointer transition-all select-none border ${targetMode === 'NET' ? 'bg-cyan-50 text-cyan-600 border-cyan-200 hover:bg-cyan-100' : 'bg-orange-50 text-orange-600 border-orange-200 hover:bg-orange-100'}`} title={targetMode === 'NET' ? 'Passa a Lordo' : 'Passa a Netto'}>{targetMode === 'NET' ? 'N' : 'L'}</button>
                                                     <span className="absolute right-7 z-10 text-cyan-500 text-[10px] pointer-events-none font-bold opacity-90">€</span>
-                                                    <input type="number" min="0" step="10" value={target === 0 ? '' : target} onChange={(e) => { const val = e.target.value === '' ? 0 : parseFloat(e.target.value); handleUpdateMonthlySalary(emp.id, val); }} onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }} className={`w-full h-full text-right bg-transparent text-sm font-bold text-cyan-900 hover:bg-cyan-50 focus:bg-cyan-50 outline-none focus:border-cyan-500 transition-all pr-11 pl-2 ${NO_SPINNER_CLASS}`} placeholder="0" />
+                                                    <input type="number" min="0" step="10" value={target === 0 ? '' : target} onChange={(e) => { const val = e.target.value === '' ? 0 : parseFloat(e.target.value); handleUpdateMonthlySalary(emp.id, val); }} onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }} onWheel={(e) => e.currentTarget.blur()} className={`w-full h-full text-right bg-transparent text-sm font-bold text-cyan-900 hover:bg-cyan-50 focus:bg-cyan-50 outline-none focus:border-cyan-500 transition-all pr-11 pl-2 ${NO_SPINNER_CLASS}`} placeholder="0" />
                                                 </div>
                                             </td>
 
@@ -2134,7 +2146,7 @@ export const MonthlySheet: React.FC<Props> = ({ userId, employees, sites, setEmp
                                             <td onClick={() => setConfigModalEmp(emp)} className={`p-3 border-gray-200 text-center text-sm font-bold cursor-pointer hover:bg-fuchsia-50 transition-colors bg-fuchsia-50/10 ${COL_W_MONEY} text-fuchsia-700`}>{splits.expenses > 0 ? formatCurrency(splits.expenses) : <span className="text-gray-200">-</span>}</td>
 
                                             {/* Malattia (PUC Code) */}
-                                            <td className={`p-2 border-l-4 border-gray-50 text-center ${COL_W_MONEY}`}>
+                                            <td className={`p-2 border-l-4 border-gray-50 text-center ${COL_W_MONEY} focus-within:ring-2 focus-within:ring-inset focus-within:ring-[#004aad] focus-within:z-10 transition-all`}>
                                                 <input
                                                     type="text"
                                                     value={monthlyData.sickLeaveCodes?.[emp.id] || ''}
@@ -2154,7 +2166,7 @@ export const MonthlySheet: React.FC<Props> = ({ userId, employees, sites, setEmp
 
                                             return (
                                                 <tr key={job.id} className="bg-yellow-50/50 hover:bg-yellow-50 transition-colors border-b border-gray-100/50">
-                                                    <td className="sticky left-0 z-10 p-0 border-r border-gray-200 bg-yellow-50/80 backdrop-blur-[2px] shadow-[4px_0_12px_-2px_rgba(0,0,0,0.02)]">
+                                                    <td className="sticky left-0 z-30 p-0 border-r border-gray-200 bg-yellow-50/80 backdrop-blur-[2px] shadow-[4px_0_12px_-2px_rgba(0,0,0,0.02)] focus-within:ring-2 focus-within:ring-inset focus-within:ring-[#004aad] focus-within:z-30 transition-all">
                                                         <div className="flex items-center px-3 py-1.5 w-full h-full border-l-4 border-yellow-300 gap-2">
                                                             <input type="text" value={job.description} onChange={(e) => handleUpdateExtraJob(emp.id, job.id, 'description', e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }} className="flex-1 min-w-0 bg-transparent text-xs font-semibold text-gray-700 outline-none placeholder-gray-400" placeholder="Descrizione lavoro extra..." />
 
@@ -2173,8 +2185,8 @@ export const MonthlySheet: React.FC<Props> = ({ userId, employees, sites, setEmp
                                                     {!isDaysCollapsed && daysColumns.map(day => {
                                                         const val = job.hours[day.dayNum] || 0;
                                                         return (
-                                                            <td key={day.dayNum} className="border-r border-gray-100 p-0 h-[2.5rem] text-center align-middle">
-                                                                <input type="number" min="0" step="0.5" value={val === 0 ? '' : val} onChange={(e) => handleUpdateExtraJob(emp.id, job.id, 'hour', e.target.value, day.dayNum)} onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }} className={`w-full h-full text-center bg-transparent outline-none text-xs text-gray-600 font-medium ${NO_SPINNER_CLASS} focus:bg-yellow-100 transition-colors`} placeholder="-" />
+                                                            <td key={day.dayNum} className="border-r border-gray-100 p-0 h-[2.5rem] text-center align-middle focus-within:ring-2 focus-within:ring-inset focus-within:ring-[#004aad] focus-within:z-10 transition-all">
+                                                                <input type="number" min="0" step="0.5" value={val === 0 ? '' : val} onChange={(e) => handleUpdateExtraJob(emp.id, job.id, 'hour', e.target.value, day.dayNum)} onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }} onWheel={(e) => e.currentTarget.blur()} className={`w-full h-full text-center bg-transparent outline-none text-xs text-gray-600 font-medium ${NO_SPINNER_CLASS} focus:bg-yellow-100 transition-colors`} placeholder="-" />
                                                             </td>
                                                         );
                                                     })}
@@ -2184,9 +2196,9 @@ export const MonthlySheet: React.FC<Props> = ({ userId, employees, sites, setEmp
                                                     <td className={`text-center text-xs text-gray-300 ${COL_W_HOUR}`}>-</td>
                                                     <td className={`text-center text-xs text-gray-300 ${COL_W_RATE}`}>-</td>
                                                     <td className={`text-center text-xs text-gray-300 ${COL_W_TARGET}`}>-</td>
-                                                    <td className={`p-1 text-center ${COL_W_MONEY}`}>
+                                                    <td className={`p-1 text-center ${COL_W_MONEY} focus-within:ring-2 focus-within:ring-inset focus-within:ring-[#004aad] focus-within:z-10 transition-all`}>
                                                         <div className="relative flex items-center justify-center">
-                                                            <input type="number" min="0" step="1" value={job.value === 0 ? '' : job.value} onChange={(e) => handleUpdateExtraJob(emp.id, job.id, 'value', e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }} className={`w-20 text-center bg-white border border-yellow-200 rounded px-1 py-0.5 text-xs font-bold text-gray-700 outline-none focus:border-yellow-400 ${NO_SPINNER_CLASS}`} placeholder="Valore €" />
+                                                            <input type="number" min="0" step="1" value={job.value === 0 ? '' : job.value} onChange={(e) => handleUpdateExtraJob(emp.id, job.id, 'value', e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }} onWheel={(e) => e.currentTarget.blur()} className={`w-20 text-center bg-white border border-yellow-200 rounded px-1 py-0.5 text-xs font-bold text-gray-700 outline-none focus:border-yellow-400 ${NO_SPINNER_CLASS}`} placeholder="Valore €" />
                                                         </div>
                                                     </td>
                                                     <td colSpan={4} className="text-center text-[10px] text-gray-400 border-l border-gray-100 italic pt-2">

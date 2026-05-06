@@ -1,0 +1,5 @@
+1. Audit e Incongruenze Rilevate
+- Dimensioni File: MonthlySheet.tsx ha superato le 2200 righe. Contiene troppa logica mista (UI, Calcoli PDF, Gestione Stato). Sarebbe opportuno estrarre la logica di calcolo in utils/ o services/.
+- LocalStorage vs Firestore: È presente una logica di migrazione in useFirestoreData.ts. Alcuni dati (come il saldoCassa in Dashboard) sono ancora salvati esclusivamente in localStorage, rendendoli non sincronizzati tra diversi dispositivi.
+- Componenti di Debug: AgentDataInjector.tsx sembra un residuo di sviluppo/test per popolare rapidamente il database, non dovrebbe essere attivo in produzione.
+- Discrepanza Costi: La Dashboard usa un costo fisso di 16€/ora (COSTO_ORA_CONTRATTO) per i calcoli rapidi, mentre il resto dell'app usa l' hourlyRate reale del dipendente. Questo può portare a divergenze tra la Dashboard e l'Analisi Costi reale.
