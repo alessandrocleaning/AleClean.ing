@@ -1904,9 +1904,10 @@ export const MonthlySheet: React.FC<Props> = ({ userId, employees, sites, setEmp
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden print:shadow-none print:border-none">
                 <div className="overflow-auto max-h-[75vh] custom-scrollbar pb-6 print:pb-0 print:overflow-visible print:max-h-none">
                     <table id="monthly-sheet-table" className="w-full border-collapse relative">
-                        <thead className="sticky top-0 z-10 shadow-md">
+                        {/* Fix Z-index per evitare sovrapposizioni online */}
+                        <thead className="sticky top-0 z-10 shadow-md" style={{ zIndex: 10 }}>
                             <tr className="text-white">
-                                <th className={`sticky left-0 top-0 z-30 bg-[#004aad] p-4 text-left w-[220px] min-w-[220px] border-b border-white/10 border-r border-white/10 font-bold uppercase text-xs tracking-wider shadow-[4px_0_12px_-2px_rgba(0,0,0,0.3)]`}>Dipendente</th>
+                                <th className={`sticky left-0 top-0 z-30 bg-[#004aad] p-4 text-left w-[220px] min-w-[220px] border-b border-white/10 border-r border-white/10 font-bold uppercase text-xs tracking-wider shadow-[4px_0_12px_-2px_rgba(0,0,0,0.3)]`} style={{ zIndex: 30 }}>Dipendente</th>
                                 {!isDaysCollapsed && daysColumns.map(day => (
                                     <th key={day.dayNum} className={`p-2 min-w-[3.5rem] text-center border-b border-white/10 border-l border-white/5 ${day.isSunday || day.isHoliday ? 'bg-blue-800' : 'bg-[#004aad]'}`}>
                                         <div className="flex flex-col items-center">
