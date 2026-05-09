@@ -360,13 +360,7 @@ export const CostAnalysis: React.FC<Props> = ({ userId, employees, sites, onUpda
 
             const rate = emp.hourlyRate || 0;
             const extraJobsValue = extraJobs.reduce((acc, job) => acc + (job.value || 0), 0);
-            
-            // Standardizzazione 15€/ora
-            const baseContractHours = diff < 0 ? effectiveHoursForDiff : totalContractRounded;
-            const baseContractCost = baseContractHours * COSTO_ORA_CONTRATTO;
-            const extraValue = diff > 0 ? (diff * rate) : 0;
-            
-            const diffValue = baseContractCost + extraValue + (totalOvertime * COSTO_ORA_CONTRATTO) + totalForfaitAmount + extraJobsValue;
+            const diffValue = (diff * rate) + (totalOvertime * rate) + totalForfaitAmount + extraJobsValue;
 
             // --- splits ---
             const effectiveSplitConfig = monthlyData.splitConfigs?.[emp.id] ?? emp.splitConfig;
@@ -428,7 +422,8 @@ export const CostAnalysis: React.FC<Props> = ({ userId, employees, sites, onUpda
             const isActive = (lineId: string) => !suppressed.includes(lineId);
 
             // --- COSTO ---
-            // (baseContractHours e baseContractCost già calcolati sopra nella sezione diffValue)
+            const baseContractHours = diff < 0 ? effectiveHoursForDiff : totalContractRounded;
+            const baseContractCost = baseContractHours * COSTO_ORA_CONTRATTO;
 
             let costoTotale: number;
             if (isCedolino) {
