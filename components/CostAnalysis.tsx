@@ -286,18 +286,20 @@ export const CostAnalysis: React.FC<Props> = ({ userId, employees, sites, onUpda
 
     // ── Per-employee calculations ────────────────────────────────────────
     const analysis = useMemo(() => {
-        const COSTO_ORA_CONTRATTO = 15;
-        const monthStart = `${year}-${String(monthIndex + 1).padStart(2, '0')}-01`;
-        const monthEnd = format(new Date(year, monthIndex + 1, 0), 'yyyy-MM-dd');
+        try {
+            const COSTO_ORA_CONTRATTO = 15;
+            const monthStart = `${year}-${String(monthIndex + 1).padStart(2, '0')}-01`;
+            const monthEnd = format(new Date(year, monthIndex + 1, 0), 'yyyy-MM-dd');
 
-        return employees
-            .filter(emp => {
-                if (emp.contractStartDate && emp.contractStartDate > monthEnd) return false;
-                if (emp.contractEndDate && emp.contractEndDate < monthStart) return false;
-                return true;
-            })
+            if (!employees || !daysColumns) return [];
 
-            .map(emp => {
+            return employees
+                .filter(emp => {
+                    if (emp.contractStartDate && emp.contractStartDate > monthEnd) return false;
+                    if (emp.contractEndDate && emp.contractEndDate < monthStart) return false;
+                    return true;
+                })
+                .map(emp => {
 
             const isCedolino = emp.showInAllowances !== false;
 
@@ -358,7 +360,13 @@ export const CostAnalysis: React.FC<Props> = ({ userId, employees, sites, onUpda
 
             const rate = emp.hourlyRate || 0;
             const extraJobsValue = extraJobs.reduce((acc, job) => acc + (job.value || 0), 0);
-            const diffValue = (diff * rate) + (totalOvertime * rate) + totalForfaitAmount + extraJobsValue;
+            
+            // Standardizzazione 15€/ora
+            const baseContractHours = diff < 0 ? effectiveHoursForDiff : totalContractRounded;
+            const baseContractCost = baseContractHours * COSTO_ORA_CONTRATTO;
+            const extraValue = diff > 0 ? (diff * rate) : 0;
+            
+            const diffValue = baseContractCost + extraValue + (totalOvertime * COSTO_ORA_CONTRATTO) + totalForfaitAmount + extraJobsValue;
 
             // --- splits ---
             const effectiveSplitConfig = monthlyData.splitConfigs?.[emp.id] ?? emp.splitConfig;
@@ -471,7 +479,11 @@ export const CostAnalysis: React.FC<Props> = ({ userId, employees, sites, onUpda
                 lineAmounts,
             };
         });
-    }, [employees, sites, daysColumns, monthlyData, recurringJobs, storageKeyRaw, year, monthIndex]);
+    } catch (error) {
+        console.error("Error in CostAnalysis useMemo:", error);
+        return [];
+    }
+}, [employees, sites, daysColumns, monthlyData, recurringJobs, storageKeyRaw, year, monthIndex]);
 
 
     const cedolinoEmps = analysis.filter(a => a.isCedolino);
