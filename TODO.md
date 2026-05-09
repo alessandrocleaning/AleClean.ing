@@ -1,5 +1,7 @@
 1. Audit e Incongruenze Rilevate
-- Dimensioni File: MonthlySheet.tsx ha superato le 2200 righe. Contiene troppa logica mista (UI, Calcoli PDF, Gestione Stato). Sarebbe opportuno estrarre la logica di calcolo in utils/ o services/.
-- LocalStorage vs Firestore: È presente una logica di migrazione in useFirestoreData.ts. Alcuni dati (come il saldoCassa in Dashboard) sono ancora salvati esclusivamente in localStorage, rendendoli non sincronizzati tra diversi dispositivi.
-- Componenti di Debug: AgentDataInjector.tsx sembra un residuo di sviluppo/test per popolare rapidamente il database, non dovrebbe essere attivo in produzione.
-- Discrepanza Costi: La Dashboard usa un costo fisso di 16€/ora (COSTO_ORA_CONTRATTO) per i calcoli rapidi, mentre il resto dell'app usa l' hourlyRate reale del dipendente. Questo può portare a divergenze tra la Dashboard e l'Analisi Costi reale.
+- [x] Dimensioni File: MonthlySheet.tsx ha superato le 2200 righe. Contiene troppa logica mista (UI, Calcoli PDF, Gestione Stato). Sarebbe opportuno estrarre la logica di calcolo in utils/ o services/.
+- [x] LocalStorage vs Firestore: È presente una logica di migrazione in useFirestoreData.ts. Alcuni dati (come il saldoCassa in Dashboard) sono ora salvati su Firestore, garantendo la sincronizzazione tra diversi dispositivi.
+- [x] Componenti di Debug: AgentDataInjector.tsx è stato rimosso per garantire la pulizia e la sicurezza in produzione.
+- [x] Discrepanza Costi: Dashboard e Analisi Costi ora usano la stessa formula: 15€/ora per le ore da contratto e l'hourlyRate reale per le ore extra.
+- [x] Regola Linguistica Agenti: Implementata persistenza per la risposta obbligatoria in italiano tramite .cursorrules, MASTER.md e AGENT_INSTRUCTIONS.md.
+- [x] Ordinamento Dipendenti: Rimosso l'ordinamento alfabetico forzato in Generatore Mensile per riflettere l'ordine personalizzato della sezione Dipendenti.

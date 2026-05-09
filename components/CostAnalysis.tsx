@@ -1,16 +1,18 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { Employee, Site, DayKey, MonthlyData, MonthlySplit, SplitConfig, Assignment, ExtraJob } from '../types';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { Employee, Site, DayKey, MonthlyData, MonthlySplit, SplitConfig, Assignment, ExtraJob, EmployeeCostConfig, CostLineItem, getDefaultCostConfig } from '../types';
 import { format, getDaysInMonth, getDay, addMonths, subMonths, parseISO, differenceInCalendarWeeks, differenceInCalendarMonths, getWeekOfMonth, addDays } from 'date-fns';
 import { it } from 'date-fns/locale';
 import { checkIsHoliday } from '../services/holidayService';
-import { ChevronLeft, ChevronRight, X, ChevronDown, ChevronUp, Loader2, Calculator, Users, Briefcase, Clock, Euro, TrendingUp } from 'lucide-react';
-import { loadMonthlyData, loadRecurringJobs } from '../lib/firestore';
+import { ChevronLeft, ChevronRight, X, ChevronDown, ChevronUp, Loader2, Calculator, Users, Briefcase, Clock, Euro, TrendingUp, Plus, Pin, Trash2, Check, Lock, Unlock } from 'lucide-react';
+import { loadMonthlyData, loadRecurringJobs, saveMonthlyData, clearCostLineAmountForFutureMonths, clearCostLineSuppressedForFutureMonths } from '../lib/firestore';
 
 interface Props {
     userId: string;
     employees: Employee[];
     sites: Site[];
+    onUpdateEmployee: (updatedEmp: Employee) => void;
 }
+const COSTO_ORA_CONTRATTO = 15;
 
 // ─── Month Picker (shared pattern) ─────────────────────────────────────────
 const MonthPickerOverlay = ({
@@ -116,13 +118,22 @@ const calculateAutoSplits = (totalValue: number, config?: SplitConfig): MonthlyS
 
 // ─── MAIN COMPONENT ─────────────────────────────────────────────────────────
 
-export const CostAnalysis: React.FC<Props> = ({ userId, employees, sites }) => {
+export const CostAnalysis: React.FC<Props> = ({ userId, employees, sites, onUpdateEmployee }) => {
     const [currentDate, setCurrentDate] = useState<Date>(new Date());
     const [monthlyData, setMonthlyData] = useState<MonthlyData>({ overrides: {}, notes: {}, splits: {}, extraJobs: {}, splitConfigs: {}, salaryTarget: {}, salaryMode: {}, sickLeaveCodes: {} });
     const [recurringJobs, setRecurringJobs] = useState<Record<string, ExtraJob[]>>({});
     const [isLoading, setIsLoading] = useState(false);
     const [isMonthPickerOpen, setIsMonthPickerOpen] = useState(false);
     const [expandedEmpIds, setExpandedEmpIds] = useState<Set<string>>(new Set());
+    const [expandedAppaltiIds, setExpandedAppaltiIds] = useState<Set<string>>(new Set());
+
+    // ── Nuovi stati per la gestione interattiva delle voci costo ─────────────
+    // { empId, lineId, isSystem } — voce in attesa di conferma eliminazione
+    const [deletePending, setDeletePending] = useState<{ empId: string; lineId: string; isSystem: boolean } | null>(null);
+    // { empId, lineId, value } — voce con importo in editing
+    const [editingAmount, setEditingAmount] = useState<{ empId: string; lineId: string; value: string } | null>(null);
+    // { empId, label, amount } — nuova voce in aggiunta
+    const [addingLine, setAddingLine] = useState<{ empId: string; label: string; amount: string } | null>(null);
 
     const storageKeyRaw = format(currentDate, 'yyyy-MM');
 
@@ -181,9 +192,84 @@ export const CostAnalysis: React.FC<Props> = ({ userId, employees, sites }) => {
         return cols;
     }, [year, monthIndex, daysInMonthObj]);
 
+    // ── Funzioni di salvataggio mensile ───────────────────────────────────
+    const saveMonthlyDataLocal = useCallback(async (newData: MonthlyData) => {
+        setMonthlyData(newData);
+        await saveMonthlyData(userId, storageKeyRaw, newData);
+    }, [userId, storageKeyRaw]);
+
+    // ── Azioni sulle voci costo ───────────────────────────────────────────
+
+    // Sopprimi una voce solo per questo mese
+    const suppressLineThisMonth = async (empId: string, lineId: string) => {
+        const suppressed = { ...(monthlyData.costLineSuppressed ?? {}) };
+        const empSuppressed = [...(suppressed[empId] ?? [])];
+        if (!empSuppressed.includes(lineId)) empSuppressed.push(lineId);
+        await saveMonthlyDataLocal({ ...monthlyData, costLineSuppressed: { ...suppressed, [empId]: empSuppressed } });
+        setDeletePending(null);
+    };
+
+    // Sopprimi/elimina una voce permanentemente (da questo mese in poi)
+    const suppressLinePermanently = async (emp: Employee, lineId: string, isSystem: boolean) => {
+        const config = emp.costConfig ?? getDefaultCostConfig();
+        let updatedConfig: EmployeeCostConfig;
+        if (isSystem) {
+            const key = lineId as keyof EmployeeCostConfig;
+            updatedConfig = { ...config, [key]: false };
+        } else {
+            updatedConfig = { ...config, customLines: config.customLines.map(l => l.id === lineId ? { ...l, enabled: false } : l) };
+        }
+        onUpdateEmployee({ ...emp, costConfig: updatedConfig });
+        // Sopprimi anche per il mese corrente
+        await suppressLineThisMonth(emp.id, lineId);
+        // Pulisci soppressioni mensili future (ora ridondanti)
+        await clearCostLineSuppressedForFutureMonths(userId, emp.id, lineId, storageKeyRaw);
+        setDeletePending(null);
+    };
+
+    // Imposta importo di una voce custom solo per questo mese
+    const setAmountThisMonth = async (empId: string, lineId: string, amount: number) => {
+        const amounts = { ...(monthlyData.costLineAmounts ?? {}) };
+        amounts[empId] = { ...(amounts[empId] ?? {}), [lineId]: amount };
+        await saveMonthlyDataLocal({ ...monthlyData, costLineAmounts: amounts });
+        setEditingAmount(null);
+    };
+
+    // Imposta importo permanente (defaultAmount + pulisci override futuri)
+    const setAmountPermanently = async (emp: Employee, lineId: string, amount: number) => {
+        const config = emp.costConfig ?? getDefaultCostConfig();
+        const updatedConfig = { ...config, customLines: config.customLines.map(l => l.id === lineId ? { ...l, defaultAmount: amount } : l) };
+        onUpdateEmployee({ ...emp, costConfig: updatedConfig });
+        await setAmountThisMonth(emp.id, lineId, amount);
+        await clearCostLineAmountForFutureMonths(userId, emp.id, lineId, storageKeyRaw);
+        setEditingAmount(null);
+    };
+
+    // Aggiungi una nuova voce custom permanente
+    const addCustomLine = (emp: Employee, label: string, defaultAmount: number) => {
+        const config = emp.costConfig ?? getDefaultCostConfig();
+        const newLine: CostLineItem = {
+            id: `custom_${Date.now()}`,
+            label: label.trim(),
+            defaultAmount,
+            enabled: true,
+        };
+        onUpdateEmployee({ ...emp, costConfig: { ...config, customLines: [...config.customLines, newLine] } });
+        setAddingLine(null);
+    };
+
+
+
     // ── Standard hours from assignments (same logic as MonthlySheet) ─────
     const getStandardHours = (emp: Employee, day: typeof daysColumns[0]) => {
         if (day.isHoliday) return 0;
+
+        const dayString = format(day.fullDate, 'yyyy-MM-dd');
+        // Se il giorno è prima dell'inizio del contratto
+        if (emp.contractStartDate && dayString < emp.contractStartDate) return 0;
+        // Se il giorno è dopo la fine del contratto
+        if (emp.contractEndDate && dayString > emp.contractEndDate) return 0;
+
         const dayKey = day.dayKey;
         const activeAssignments = (emp.defaultAssignments || []).filter(a => !a.archived);
         if (activeAssignments.length > 0) {
@@ -197,11 +283,22 @@ export const CostAnalysis: React.FC<Props> = ({ userId, employees, sites }) => {
         return emp.contractHours?.[dayKey] || 0;
     };
 
+
     // ── Per-employee calculations ────────────────────────────────────────
     const analysis = useMemo(() => {
         const COSTO_ORA_CONTRATTO = 15;
+        const monthStart = `${year}-${String(monthIndex + 1).padStart(2, '0')}-01`;
+        const monthEnd = format(new Date(year, monthIndex + 1, 0), 'yyyy-MM-dd');
 
-        return employees.map(emp => {
+        return employees
+            .filter(emp => {
+                if (emp.contractStartDate && emp.contractStartDate > monthEnd) return false;
+                if (emp.contractEndDate && emp.contractEndDate < monthStart) return false;
+                return true;
+            })
+
+            .map(emp => {
+
             const isCedolino = emp.showInAllowances !== false;
 
             // --- work hours (same as MonthlySheet) ---
@@ -239,6 +336,9 @@ export const CostAnalysis: React.FC<Props> = ({ userId, employees, sites }) => {
             // --- Contract hours (ALL scheduled days, no subtraction for absences) ---
             const totalContract = daysColumns.reduce((acc, day) => {
                 if (day.isHoliday) return acc;
+                const dayString = format(day.fullDate, 'yyyy-MM-dd');
+                if (emp.contractStartDate && dayString < emp.contractStartDate) return acc;
+                if (emp.contractEndDate && dayString > emp.contractEndDate) return acc;
                 return acc + (emp.contractHours?.[day.dayKey] || 0);
             }, 0);
             const totalContractRounded = Math.round(totalContract * 100) / 100;
@@ -293,10 +393,15 @@ export const CostAnalysis: React.FC<Props> = ({ userId, employees, sites }) => {
                     // Calculate hours for this specific assignment
                     let assignHours = 0;
                     daysColumns.forEach(day => {
+                        const dayString = format(day.fullDate, 'yyyy-MM-dd');
+                        if (emp.contractStartDate && dayString < emp.contractStartDate) return;
+                        if (emp.contractEndDate && dayString > emp.contractEndDate) return;
+
                         if (checkRecurrence(a, day.fullDate)) {
                             assignHours += (a.schedule?.[day.dayKey] || 0);
                         }
                     });
+
 
                     return {
                         siteId: a.siteId,
@@ -307,16 +412,37 @@ export const CostAnalysis: React.FC<Props> = ({ userId, employees, sites }) => {
                     };
                 });
 
+            // --- costConfig e override mensili ---
+            const costConfig: EmployeeCostConfig = { ...getDefaultCostConfig(), ...(emp.costConfig || {}) };
+            const suppressed: string[] = monthlyData.costLineSuppressed?.[emp.id] ?? [];
+            const lineAmounts: Record<string, number> = monthlyData.costLineAmounts?.[emp.id] ?? {};
+
+            const isActive = (lineId: string) => !suppressed.includes(lineId);
+
             // --- COSTO ---
+            const baseContractHours = diff < 0 ? effectiveHoursForDiff : totalContractRounded;
+            const baseContractCost = baseContractHours * COSTO_ORA_CONTRATTO;
+
             let costoTotale: number;
             if (isCedolino) {
-                // ore contratto × 15 + ore extra × tariffa + trasferta + benzina + spese
-                const costoContratto = totalContractRounded * COSTO_ORA_CONTRATTO;
-                const costoExtra = Math.max(0, diff) * rate;
-                const costoStraordinari = totalOvertime * rate;
-                costoTotale = costoContratto + costoExtra + costoStraordinari + totalForfaitAmount + extraJobsValue + splits.travel + splits.fuel + splits.expenses;
+                costoTotale = 0;
+                if (costConfig.includeContractHours && isActive('includeContractHours'))
+                    costoTotale += baseContractCost;
+                if (costConfig.includeExtraHours && isActive('includeExtraHours') && diff > 0)
+                    costoTotale += Math.max(0, diff) * rate;
+                if (costConfig.includeOvertime && isActive('includeOvertime'))
+                    costoTotale += totalOvertime * COSTO_ORA_CONTRATTO;
+                if (costConfig.includeForfait && isActive('includeForfait'))
+                    costoTotale += totalForfaitAmount;
+                if (costConfig.includeExtraJobs && isActive('includeExtraJobs'))
+                    costoTotale += extraJobsValue;
+                if (costConfig.includeSplits && isActive('includeSplits'))
+                    costoTotale += splits.travel + splits.fuel + splits.expenses;
+                costConfig.customLines.forEach(line => {
+                    if (line.enabled && isActive(line.id))
+                        costoTotale += lineAmounts[line.id] ?? line.defaultAmount;
+                });
             } else {
-                // Non in cedolini: solo il Valore del Generatore
                 costoTotale = diffValue;
             }
             costoTotale = Math.round(costoTotale * 100) / 100;
@@ -335,12 +461,18 @@ export const CostAnalysis: React.FC<Props> = ({ userId, employees, sites }) => {
                 splits,
                 assignmentBreakdown,
                 costoTotale,
+                baseContractHours,
+                baseContractCost,
                 extraJobs,
                 extraJobsHours,
                 extraJobsValue,
+                costConfig,
+                suppressed,
+                lineAmounts,
             };
         });
     }, [employees, sites, daysColumns, monthlyData, recurringJobs, storageKeyRaw, year, monthIndex]);
+
 
     const cedolinoEmps = analysis.filter(a => a.isCedolino);
     const nonCedolinoEmps = analysis.filter(a => !a.isCedolino);
@@ -350,6 +482,14 @@ export const CostAnalysis: React.FC<Props> = ({ userId, employees, sites }) => {
 
     const toggleExpand = (id: string) => {
         setExpandedEmpIds(prev => {
+            const next = new Set(prev);
+            if (next.has(id)) next.delete(id); else next.add(id);
+            return next;
+        });
+    };
+
+    const toggleAppaltiExpand = (id: string) => {
+        setExpandedAppaltiIds(prev => {
             const next = new Set(prev);
             if (next.has(id)) next.delete(id); else next.add(id);
             return next;
@@ -446,25 +586,44 @@ export const CostAnalysis: React.FC<Props> = ({ userId, employees, sites }) => {
 
                         {/* Appalti breakdown */}
                         <div className="px-5 pb-4">
-                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-1.5">
-                                <Briefcase className="w-3 h-3" /> Appalti nel mese
-                            </p>
-                            {a.assignmentBreakdown.length > 0 ? (
-                                <div className="space-y-2">
-                                    {a.assignmentBreakdown.map((ab, i) => (
-                                        <div key={`${ab.siteId}-${i}`} className="flex items-center justify-between py-2.5 px-4 bg-gray-50 rounded-xl border border-gray-100 hover:bg-gray-100/80 transition-colors">
-                                            <div className="flex items-center gap-2 min-w-0">
-                                                <div className={`w-2 h-2 rounded-full flex-shrink-0 ${ab.type === 'FORFAIT' ? 'bg-amber-400' : 'bg-blue-400'}`} />
-                                                <span className="font-semibold text-sm text-gray-800 truncate">{ab.siteName}</span>
-                                                <span className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-full ${ab.type === 'FORFAIT' ? 'bg-amber-100 text-amber-700 border border-amber-200' : 'bg-blue-100 text-blue-700 border border-blue-200'}`}>
-                                                    {ab.type === 'FORFAIT' ? 'Forfait' : 'Ore'}
-                                                </span>
-                                            </div>
-                                            <span className="font-black text-sm text-gray-800 flex-shrink-0 tabular-nums ml-3">
-                                                {ab.type === 'FORFAIT' ? formatCurrency(ab.amount) : `${ab.hours}h`}
-                                            </span>
+                            <button
+                                onClick={() => toggleAppaltiExpand(a.emp.id)}
+                                className="w-full flex items-center justify-between text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2 hover:text-blue-600 transition-colors group"
+                            >
+                                <span className="flex items-center gap-1.5">
+                                    <Briefcase className="w-3 h-3" /> Appalti nel mese
+                                    <span className="ml-1 bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-full text-[9px] group-hover:bg-blue-100 group-hover:text-blue-600 transition-colors">
+                                        {a.assignmentBreakdown.length + a.extraJobs.length}
+                                    </span>
+                                </span>
+                                <ChevronRight className={`w-3.5 h-3.5 transition-transform duration-200 ${expandedAppaltiIds.has(a.emp.id) ? 'rotate-90 text-blue-500' : 'text-gray-300'}`} />
+                            </button>
+
+                            {expandedAppaltiIds.has(a.emp.id) && (
+                                <div className="space-y-2 animate-fade-in-up">
+                                    {a.assignmentBreakdown.length > 0 ? (
+                                        <div className="space-y-2">
+                                            {a.assignmentBreakdown.map((ab, i) => (
+                                                <div key={`${ab.siteId}-${i}`} className="flex items-center justify-between py-2.5 px-4 bg-gray-50 rounded-xl border border-gray-100 hover:bg-gray-100/80 transition-colors">
+                                                    <div className="flex items-center gap-2 min-w-0">
+                                                        <div className={`w-2 h-2 rounded-full flex-shrink-0 ${ab.type === 'FORFAIT' ? 'bg-amber-400' : 'bg-blue-400'}`} />
+                                                        <span className="font-semibold text-sm text-gray-800 truncate">{ab.siteName}</span>
+                                                        <span className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-full ${ab.type === 'FORFAIT' ? 'bg-amber-100 text-amber-700 border border-amber-200' : 'bg-blue-100 text-blue-700 border border-blue-200'}`}>
+                                                            {ab.type === 'FORFAIT' ? 'Forfait' : 'Ore'}
+                                                        </span>
+                                                    </div>
+                                                    <span className="font-black text-sm text-gray-800 flex-shrink-0 tabular-nums ml-3">
+                                                        {ab.type === 'FORFAIT' ? formatCurrency(ab.amount) : `${ab.hours}h`}
+                                                    </span>
+                                                </div>
+                                            ))}
                                         </div>
-                                    ))}
+                                    ) : (
+                                        <div className="text-center py-4 bg-gray-50 rounded-xl border border-gray-100 border-dashed">
+                                            <p className="text-xs text-gray-400 italic">Nessun appalto assegnato per questo mese.</p>
+                                        </div>
+                                    )}
+
                                     {/* Extra jobs */}
                                     {a.extraJobs.length > 0 && a.extraJobs.map((job, i) => {
                                         const jobHours = Object.values(job.hours).reduce<number>((acc, b) => acc + (Number(b) || 0), 0);
@@ -483,71 +642,185 @@ export const CostAnalysis: React.FC<Props> = ({ userId, employees, sites }) => {
                                         );
                                     })}
                                 </div>
-                            ) : (
-                                <p className="text-sm text-gray-400 italic py-2">Nessun appalto attivo in questo mese.</p>
                             )}
                         </div>
 
                         {/* Cost breakdown for cedolino employees */}
-                        {a.isCedolino && (
-                            <div className="px-5 pb-5">
-                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-1.5">
-                                    <Calculator className="w-3 h-3" /> Dettaglio costo cedolino
-                                </p>
-                                <div className="bg-gradient-to-br from-gray-50 to-slate-50 rounded-xl border border-gray-200 divide-y divide-gray-100 overflow-hidden">
-                                    <div className="flex items-center justify-between px-4 py-2.5">
-                                        <span className="text-sm text-gray-600">Ore contratto × 15 €</span>
-                                        <span className="font-bold text-sm text-gray-800 tabular-nums">{formatCurrency(a.totalContract * 15)}</span>
+                        {a.isCedolino && (() => {
+                            // Funzione helper per rendering di una singola voce sistema
+                            const renderSystemLine = (lineId: string, label: string, amount: number, colorClass: string = 'text-gray-800') => {
+                                const cfg = a.costConfig;
+                                const flagKey = lineId as keyof typeof cfg;
+                                
+                                // Se la voce è disabilitata permanentemente o soppressa nel mese, sparisce.
+                                if (cfg[flagKey] === false || a.suppressed.includes(lineId)) return null;
+
+                                const isPendingDelete = deletePending?.empId === a.emp.id && deletePending?.lineId === lineId;
+                                return (
+                                    <div key={lineId}>
+                                        <div className="flex items-center justify-between px-4 py-2.5 group">
+                                            <span className="text-sm text-gray-600 flex-1">{label}</span>
+                                            <div className="flex items-center gap-2">
+                                                <span className={`font-bold text-sm tabular-nums ${colorClass}`}>{formatCurrency(amount)}</span>
+                                                <button onClick={() => setDeletePending({ empId: a.emp.id, lineId, isSystem: true })}
+                                                    className="opacity-0 group-hover:opacity-100 transition-opacity p-1 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg">
+                                                    <Trash2 className="w-3 h-3" />
+                                                </button>
+                                            </div>
+                                        </div>
+                                        {isPendingDelete && (
+                                            <div className="mx-4 mb-2 p-3 bg-red-50 border border-red-200 rounded-xl text-xs">
+                                                <p className="font-bold text-red-700 mb-2">Eliminare "{label}"?</p>
+                                                <div className="flex gap-2">
+                                                    <button onClick={() => suppressLineThisMonth(a.emp.id, lineId)}
+                                                        className="flex-1 py-1.5 px-2 bg-orange-100 text-orange-800 font-bold rounded-lg hover:bg-orange-200 transition-colors">
+                                                        Solo questo mese
+                                                    </button>
+                                                    <button onClick={() => suppressLinePermanently(a.emp, lineId, true)}
+                                                        className="flex-1 py-1.5 px-2 bg-red-600 text-white font-bold rounded-lg hover:bg-red-700 transition-colors">
+                                                        Da ora in poi
+                                                    </button>
+                                                    <button onClick={() => setDeletePending(null)}
+                                                        className="py-1.5 px-2 bg-gray-100 text-gray-600 font-bold rounded-lg hover:bg-gray-200 transition-colors">
+                                                        <X className="w-3 h-3" />
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
-                                    {a.diff > 0 && (
-                                        <div className="flex items-center justify-between px-4 py-2.5">
-                                            <span className="text-sm text-gray-600">Ore extra ({a.diff}h) × {a.rate} €</span>
-                                            <span className="font-bold text-sm text-emerald-700 tabular-nums">{formatCurrency(a.diff * a.rate)}</span>
+                                );
+                            };
+
+                            // Rendering voce custom con editing importo
+                            const renderCustomLine = (line: typeof a.costConfig.customLines[0]) => {
+                                if (!line.enabled) return null;
+                                if (a.suppressed.includes(line.id)) return null;
+                                const amount = a.lineAmounts[line.id] ?? line.defaultAmount;
+                                const isPendingDelete = deletePending?.empId === a.emp.id && deletePending?.lineId === line.id;
+                                const isEditing = editingAmount?.empId === a.emp.id && editingAmount?.lineId === line.id;
+                                return (
+                                    <div key={line.id}>
+                                        <div className="flex items-center justify-between px-4 py-2 group">
+                                            <span className="text-sm text-gray-700 font-medium flex-1">{line.label}</span>
+                                            <div className="flex items-center gap-2">
+                                                {isEditing ? (
+                                                    <>
+                                                        <input type="number" min="0" step="0.01"
+                                                            value={editingAmount.value}
+                                                            onChange={e => setEditingAmount({ ...editingAmount, value: e.target.value })}
+                                                            className="w-24 text-sm text-right border border-blue-300 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                                                            autoFocus />
+                                                        <button onClick={() => setAmountThisMonth(a.emp.id, line.id, parseFloat(editingAmount.value) || 0)}
+                                                            className="py-1 px-2 bg-orange-100 text-orange-800 text-[10px] font-bold rounded-lg hover:bg-orange-200 transition-colors whitespace-nowrap">
+                                                            Solo mese
+                                                        </button>
+                                                        <button onClick={() => setAmountPermanently(a.emp, line.id, parseFloat(editingAmount.value) || 0)}
+                                                            className="py-1 px-2 bg-blue-600 text-white text-[10px] font-bold rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap">
+                                                            Sempre
+                                                        </button>
+                                                        <button onClick={() => setEditingAmount(null)} className="p-1 text-gray-400 hover:text-gray-600">
+                                                            <X className="w-3 h-3" />
+                                                        </button>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <button onClick={() => setEditingAmount({ empId: a.emp.id, lineId: line.id, value: String(amount) })}
+                                                            className="font-bold text-sm tabular-nums text-indigo-700 hover:underline cursor-pointer bg-transparent border-0 p-0">
+                                                            {formatCurrency(amount)}
+                                                        </button>
+                                                        <button onClick={() => setDeletePending({ empId: a.emp.id, lineId: line.id, isSystem: false })}
+                                                            className="opacity-0 group-hover:opacity-100 transition-opacity p-1 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg">
+                                                            <Trash2 className="w-3 h-3" />
+                                                        </button>
+                                                    </>
+                                                )}
+                                            </div>
                                         </div>
-                                    )}
-                                    {a.totalOvertime > 0 && (
-                                        <div className="flex items-center justify-between px-4 py-2.5">
-                                            <span className="text-sm text-gray-600">Straordinari ({a.totalOvertime}h) × {a.rate} €</span>
-                                            <span className="font-bold text-sm text-orange-700 tabular-nums">{formatCurrency(a.totalOvertime * a.rate)}</span>
+                                        {isPendingDelete && (
+                                            <div className="mx-4 mb-2 p-3 bg-red-50 border border-red-200 rounded-xl text-xs">
+                                                <p className="font-bold text-red-700 mb-2">Eliminare "{line.label}"?</p>
+                                                <div className="flex gap-2">
+                                                    <button onClick={() => suppressLineThisMonth(a.emp.id, line.id)}
+                                                        className="flex-1 py-1.5 px-2 bg-orange-100 text-orange-800 font-bold rounded-lg hover:bg-orange-200 transition-colors">
+                                                        Solo questo mese
+                                                    </button>
+                                                    <button onClick={() => suppressLinePermanently(a.emp, line.id, false)}
+                                                        className="flex-1 py-1.5 px-2 bg-red-600 text-white font-bold rounded-lg hover:bg-red-700 transition-colors">
+                                                        Da ora in poi
+                                                    </button>
+                                                    <button onClick={() => setDeletePending(null)}
+                                                        className="py-1.5 px-2 bg-gray-100 text-gray-600 font-bold rounded-lg hover:bg-gray-200 transition-colors">
+                                                        <X className="w-3 h-3" />
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            };
+
+                            const isAddingForThisEmp = addingLine?.empId === a.emp.id;
+
+                            return (
+                                <div className="px-5 pb-5">
+                                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                                        <Calculator className="w-3 h-3" /> Dettaglio costo cedolino
+                                    </p>
+                                    <div className="bg-gradient-to-br from-gray-50 to-slate-50 rounded-xl border border-gray-200 divide-y divide-gray-100 overflow-hidden">
+                                        {/* Voci di sistema */}
+                                        {renderSystemLine('includeContractHours', `Ore contratto ${a.diff < 0 ? `ridotte (${a.baseContractHours}h)` : `(${a.totalContract}h)`} × 15 €`, a.baseContractCost)}
+                                        {a.diff > 0 && renderSystemLine('includeExtraHours', `Ore extra (${a.diff}h) × ${a.rate} €`, a.diff * a.rate, 'text-emerald-700')}
+                                        {a.totalOvertime > 0 && renderSystemLine('includeOvertime', `Straordinari (${a.totalOvertime}h) × 15 €`, a.totalOvertime * COSTO_ORA_CONTRATTO, 'text-orange-700')}
+                                        {a.totalForfaitAmount > 0 && renderSystemLine('includeForfait', 'Forfait', a.totalForfaitAmount, 'text-amber-700')}
+                                        {a.extraJobsValue > 0 && renderSystemLine('includeExtraJobs', 'Lavori extra', a.extraJobsValue, 'text-yellow-700')}
+                                        {(a.splits.travel + a.splits.fuel + a.splits.expenses) > 0 && renderSystemLine('includeSplits', 'Trasferta / Benzina / Spese', a.splits.travel + a.splits.fuel + a.splits.expenses, 'text-sky-700')}
+
+                                        {/* Voci Personalizzate */}
+                                        {(a.costConfig.customLines ?? []).map(renderCustomLine)}
+
+                                        {/* Aggiunta Nuova Voce */}
+                                        {isAddingForThisEmp ? (
+                                            <div className="px-4 py-3 bg-blue-50 border-t border-blue-100">
+                                                <p className="text-[10px] font-bold text-blue-700 uppercase tracking-wider mb-2">Nuova voce</p>
+                                                <div className="flex gap-2 flex-wrap">
+                                                    <input type="text" placeholder="Nome voce (es. Rimborso Km)"
+                                                        value={addingLine.label}
+                                                        onChange={e => setAddingLine({ ...addingLine, label: e.target.value })}
+                                                        className="flex-1 min-w-[140px] text-sm border border-blue-300 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-400" autoFocus />
+                                                    <input type="number" min="0" step="0.01" placeholder="Importo €"
+                                                        value={addingLine.amount}
+                                                        onChange={e => setAddingLine({ ...addingLine, amount: e.target.value })}
+                                                        className="w-24 text-sm border border-blue-300 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-400" />
+                                                    <button
+                                                        onClick={() => addingLine.label.trim() && addCustomLine(a.emp, addingLine.label, parseFloat(addingLine.amount) || 0)}
+                                                        disabled={!addingLine.label.trim()}
+                                                        className="py-1.5 px-3 bg-blue-600 text-white text-xs font-bold rounded-lg hover:bg-blue-700 disabled:opacity-40 transition-colors flex items-center gap-1">
+                                                        <Check className="w-3 h-3" /> Salva
+                                                    </button>
+                                                    <button onClick={() => setAddingLine(null)}
+                                                        className="py-1.5 px-3 bg-gray-100 text-gray-600 text-xs font-bold rounded-lg hover:bg-gray-200 transition-colors">
+                                                        Annulla
+                                                    </button>
+                                                </div>
+                                                <p className="text-[10px] text-blue-500 mt-1.5">La voce verrà salvata permanentemente. L'importo è editabile ogni mese.</p>
+                                            </div>
+                                        ) : (
+                                            <button onClick={() => setAddingLine({ empId: a.emp.id, label: '', amount: '' })}
+                                                className="w-full flex items-center justify-center gap-1.5 py-2.5 px-4 text-[11px] font-bold text-blue-600 hover:bg-blue-50 transition-colors">
+                                                <Plus className="w-3.5 h-3.5" /> Aggiungi voce
+                                            </button>
+                                        )}
+
+
+                                        {/* Totale */}
+                                        <div className="flex items-center justify-between px-4 py-3 bg-white">
+                                            <span className="font-black text-sm text-gray-800 uppercase tracking-wider">Totale costo</span>
+                                            <span className="font-black text-lg text-gray-900 tabular-nums">{formatCurrency(a.costoTotale)}</span>
                                         </div>
-                                    )}
-                                    {a.totalForfaitAmount > 0 && (
-                                        <div className="flex items-center justify-between px-4 py-2.5">
-                                            <span className="text-sm text-gray-600">Forfait</span>
-                                            <span className="font-bold text-sm text-amber-700 tabular-nums">{formatCurrency(a.totalForfaitAmount)}</span>
-                                        </div>
-                                    )}
-                                    {a.extraJobsValue > 0 && (
-                                        <div className="flex items-center justify-between px-4 py-2.5">
-                                            <span className="text-sm text-gray-600">Lavori extra</span>
-                                            <span className="font-bold text-sm text-yellow-700 tabular-nums">{formatCurrency(a.extraJobsValue)}</span>
-                                        </div>
-                                    )}
-                                    {a.splits.travel > 0 && (
-                                        <div className="flex items-center justify-between px-4 py-2.5">
-                                            <span className="text-sm text-gray-600">Trasferta</span>
-                                            <span className="font-bold text-sm text-sky-700 tabular-nums">{formatCurrency(a.splits.travel)}</span>
-                                        </div>
-                                    )}
-                                    {a.splits.fuel > 0 && (
-                                        <div className="flex items-center justify-between px-4 py-2.5">
-                                            <span className="text-sm text-gray-600">Benzina</span>
-                                            <span className="font-bold text-sm text-amber-700 tabular-nums">{formatCurrency(a.splits.fuel)}</span>
-                                        </div>
-                                    )}
-                                    {a.splits.expenses > 0 && (
-                                        <div className="flex items-center justify-between px-4 py-2.5">
-                                            <span className="text-sm text-gray-600">Spese</span>
-                                            <span className="font-bold text-sm text-fuchsia-700 tabular-nums">{formatCurrency(a.splits.expenses)}</span>
-                                        </div>
-                                    )}
-                                    <div className="flex items-center justify-between px-4 py-3 bg-white">
-                                        <span className="font-black text-sm text-gray-800 uppercase tracking-wider">Totale costo</span>
-                                        <span className="font-black text-lg text-gray-900 tabular-nums">{formatCurrency(a.costoTotale)}</span>
                                     </div>
                                 </div>
-                            </div>
-                        )}
+                            );
+                        })()}
 
                         {/* Non-cedolino: just show Valore */}
                         {!a.isCedolino && (
@@ -558,6 +831,7 @@ export const CostAnalysis: React.FC<Props> = ({ userId, employees, sites }) => {
                                 </div>
                             </div>
                         )}
+
                     </div>
                 )}
             </div>

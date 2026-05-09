@@ -50,3 +50,8 @@ Styling: Tailwind CSS con animazioni personalizzate e Lucide-React per l'iconogr
 Data Vis: Recharts per i grafici statistici in Dashboard.
 Date Management: date-fns (esteso utilizzo per manipolazione di mesi e settimane).
 Export: jsPDF e jspdf-autotable per la generazione di report PDF dei fogli ore.
+
+6. Linee Guida per gli Agenti AI
+Per mantenere la coerenza con le preferenze dell'utente:
+- Tutte le interazioni e le risposte devono essere in lingua ITALIANA.
+- La documentazione interna e i piani di lavoro devono essere redatti in ITALIANO.

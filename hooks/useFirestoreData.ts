@@ -14,6 +14,8 @@ import {
     saveMonthlyData,
     migrateFromLocalStorage,
     checkAndWipeOldData,
+    loadSettings,
+    saveSettings,
 } from '../lib/firestore';
 // Nessun seed data: gli utenti nuovi partono con liste vuote
 
@@ -51,6 +53,8 @@ interface UseFirestoreDataResult {
     setSites: (sites: Site[] | ((prev: Site[]) => Site[])) => void;
     getMonthlyData: (monthKey: string) => Promise<MonthlyData | null>;
     setMonthlyData: (monthKey: string, data: MonthlyData) => Promise<void>;
+    saldoCassa: number;
+    setSaldoCassa: (val: number) => void;
     syncStatus: SyncStatus;
     hasMigratableData: boolean;
     triggerMigration: () => Promise<void>;
@@ -59,22 +63,26 @@ interface UseFirestoreDataResult {
 export const useFirestoreData = (user: User, isAdmin: boolean): UseFirestoreDataResult => {
     const [employees, setEmployeesState] = useState<Employee[]>([]);
     const [sites, setSitesState] = useState<Site[]>([]);
+    const [saldoCassa, setSaldoCassaState] = useState<number>(0);
     const [syncStatus, setSyncStatus] = useState<SyncStatus>('loading');
     const [hasMigratableData, setHasMigratableData] = useState(false);
 
     const saveEmployeesTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const saveSitesTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const saveSettingsTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const isLoadingRef = useRef(true);
 
     // Refs for deep equality check to prevent infinite save loops causing memory leaks
     const lastSavedEmployeesRef = useRef<string>('');
     const lastSavedSitesRef = useRef<string>('');
+    const lastSavedSettingsRef = useRef<string>('');
 
     // Controlla se ci sono dati locali
     useEffect(() => {
         const hasLocal =
             !!localStorage.getItem('cleaning_employees') ||
-            !!localStorage.getItem('cleaning_sites');
+            !!localStorage.getItem('cleaning_sites') ||
+            !!localStorage.getItem('dashboard_saldo_cassa');
         setHasMigratableData(hasLocal);
     }, []);
 
@@ -90,17 +98,20 @@ export const useFirestoreData = (user: User, isAdmin: boolean): UseFirestoreData
                     await checkAndWipeOldData(user.uid);
                 }
 
-                const [emps, stes] = await Promise.all([
+                const [emps, stes, sets] = await Promise.all([
                     loadEmployees(user.uid),
                     loadSites(user.uid),
+                    loadSettings(user.uid),
                 ]);
 
                 // Ogni utente parte con i propri dati (vuoti per i nuovi account)
                 const sanitizedEmps = emps.map(sanitize);
                 setEmployeesState(sanitizedEmps);
                 setSitesState(stes);
+                setSaldoCassaState(sets.saldoCassa || 0);
                 lastSavedEmployeesRef.current = JSON.stringify(sanitizedEmps);
                 lastSavedSitesRef.current = JSON.stringify(stes);
+                lastSavedSettingsRef.current = JSON.stringify(sets);
                 setSyncStatus('synced');
             } catch (e) {
                 console.error('Errore caricamento dati:', e);
@@ -165,6 +176,29 @@ export const useFirestoreData = (user: User, isAdmin: boolean): UseFirestoreData
         });
     }, [user.uid]);
 
+    // Debounced auto-save settings
+    const setSaldoCassa = useCallback((val: number) => {
+        setSaldoCassaState(val);
+        if (!isLoadingRef.current) {
+            const nextSettings = { saldoCassa: val };
+            const nextString = JSON.stringify(nextSettings);
+            if (nextString !== lastSavedSettingsRef.current) {
+                setSyncStatus('saving');
+                if (saveSettingsTimerRef.current) clearTimeout(saveSettingsTimerRef.current);
+                saveSettingsTimerRef.current = setTimeout(async () => {
+                    try {
+                        lastSavedSettingsRef.current = nextString;
+                        await saveSettings(user.uid, nextSettings);
+                        setSyncStatus('synced');
+                    } catch (e) {
+                        console.error('Errore salvataggio settings:', e);
+                        setSyncStatus('error');
+                    }
+                }, 1200);
+            }
+        }
+    }, [user.uid]);
+
     // Monthly data (lazy, on demand)
     const getMonthlyData = useCallback(async (monthKey: string) => {
         return loadMonthlyData(user.uid, monthKey);
@@ -210,6 +244,8 @@ export const useFirestoreData = (user: User, isAdmin: boolean): UseFirestoreData
         setSites,
         getMonthlyData,
         setMonthlyData: setMonthlyDataFn,
+        saldoCassa,
+        setSaldoCassa,
         syncStatus,
         hasMigratableData,
         triggerMigration,

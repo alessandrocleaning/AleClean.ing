@@ -1055,6 +1055,9 @@ export const MonthlyAllowanceSheet: React.FC<Props> = ({ userId, employees }) =>
                                 // --- VALUE CALCULATION FOR SPLITS ---
                                 const totalContract = daysColumns.reduce((acc, day) => {
                                     if (day.isHoliday) return acc;
+                                    const dayString = format(day.fullDate, 'yyyy-MM-dd');
+                                    if (emp.contractStartDate && dayString < emp.contractStartDate) return acc;
+                                    if (emp.contractEndDate && dayString > emp.contractEndDate) return acc;
                                     return acc + (emp.contractHours?.[day.dayKey] || 0);
                                 }, 0);
 

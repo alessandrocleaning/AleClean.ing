@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Employee, Site, Assignment, DayKey, AssignmentType, RecurrenceType, ContractType } from '../types';
+import { Employee, Site, Assignment, DayKey, AssignmentType, RecurrenceType, ContractType, CostLineItem, EmployeeCostConfig, getDefaultCostConfig } from '../types';
 import { Plus, Trash2, User, Briefcase, GripVertical, X, Pencil, Check, Search, ChevronDown, ChevronUp, Clock, FileText, Calculator, Euro, Wallet, Repeat, Calendar, Settings2, ArrowRight, PlayCircle, StopCircle, AlertCircle, Archive, MessageSquare, Copy, UserPlus, Sparkles, Target, Eye, EyeOff } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { it } from 'date-fns/locale';
@@ -598,6 +598,11 @@ export const EmployeeManager: React.FC<Props> = ({ employees, sites, setEmployee
         }));
         setAssignToDelete(null);
     };
+
+    const updateEmployee = (empId: string, updates: Partial<Employee>) => {
+        setEmployees(prev => prev.map(emp => emp.id === empId ? { ...emp, ...updates } : emp));
+    };
+
 
     const getSiteName = (id: string) => sites.find(s => s.id === id)?.name || 'Sconosciuto';
 
@@ -1334,6 +1339,91 @@ export const EmployeeManager: React.FC<Props> = ({ employees, sites, setEmployee
                                                 </div>
                                             </div>
                                         </div>
+
+                                        {/* SEZIONE: Configurazione Voci Costo */}
+                                        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                                            <details>
+                                                <summary className="w-full p-4 flex items-center justify-between bg-white hover:bg-gray-50 transition-colors group cursor-pointer list-none">
+                                                    <h4 className="text-sm font-bold text-gray-800 flex items-center gap-2 group-hover:text-[#004aad] transition-colors uppercase tracking-wide">
+                                                        <Calculator className="w-4 h-4 text-[#ffec09] fill-[#ffec09]" /> Configurazione Voci Costo
+                                                    </h4>
+                                                    <ChevronDown className="w-4 h-4 text-gray-400 details-open:rotate-180 transition-transform" />
+                                                </summary>
+                                                <div className="p-4 border-t border-gray-100 space-y-4">
+                                                    {/* Toggle voci di sistema */}
+                                                    <div>
+                                                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Voci di sistema</p>
+                                                        <div className="space-y-2">
+                                                            {([
+                                                                { key: 'includeContractHours', label: 'Ore contratto × 15 €' },
+                                                                { key: 'includeExtraHours', label: 'Ore extra × tariffa' },
+                                                                { key: 'includeOvertime', label: 'Straordinari × tariffa' },
+                                                                { key: 'includeForfait', label: 'Forfait' },
+                                                                { key: 'includeExtraJobs', label: 'Lavori extra' },
+                                                                { key: 'includeSplits', label: 'Trasferta / Benzina / Spese' },
+                                                            ] as { key: keyof EmployeeCostConfig; label: string }[]).map(({ key, label }) => {
+                                                                const cfg = { ...getDefaultCostConfig(), ...(emp.costConfig || {}) };
+                                                                const isEnabled = cfg[key] !== false;
+                                                                return (
+                                                                    <div key={key} className="flex items-center justify-between py-1.5 px-3 rounded-lg bg-gray-50 border border-gray-100">
+                                                                        <span className={`text-xs font-medium ${isEnabled ? 'text-gray-700' : 'text-gray-400 line-through'}`}>{label}</span>
+                                                                        <button
+                                                                            onClick={(e) => {
+                                                                                e.preventDefault();
+                                                                                e.stopPropagation();
+                                                                                const updCfg: EmployeeCostConfig = { ...cfg, [key]: !isEnabled };
+                                                                                updateEmployee(emp.id, { costConfig: updCfg });
+                                                                            }}
+                                                                            className={`relative w-9 h-5 rounded-full transition-colors flex-shrink-0 ${isEnabled ? 'bg-[#004aad]' : 'bg-gray-300'}`}>
+                                                                            <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${isEnabled ? 'translate-x-4' : 'translate-x-0'}`} />
+                                                                        </button>
+                                                                    </div>
+                                                                );
+                                                            })}
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Voci personalizzate */}
+                                                    <div>
+                                                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Voci personalizzate</p>
+                                                        <div className="space-y-1.5">
+                                                            {(emp.costConfig?.customLines ?? []).map((line, idx) => (
+                                                                <div key={line.id} className={`flex items-center gap-2 px-3 py-2 rounded-lg border ${line.enabled ? 'bg-indigo-50 border-indigo-100' : 'bg-gray-50 border-gray-100 opacity-60'}`}>
+                                                                    <span className={`flex-1 text-xs font-medium ${line.enabled ? 'text-indigo-800' : 'text-gray-400 line-through'}`}>{line.label}</span>
+                                                                    {line.defaultAmount > 0 && <span className="text-[10px] font-bold text-indigo-500">{line.defaultAmount} €/mese</span>}
+                                                                    <button
+                                                                        onClick={(e) => {
+                                                                            e.preventDefault();
+                                                                            e.stopPropagation();
+                                                                            const cfg = { ...getDefaultCostConfig(), ...(emp.costConfig || {}) };
+                                                                            const updLines = cfg.customLines.map((l, i) => i === idx ? { ...l, enabled: !l.enabled } : l);
+                                                                            updateEmployee(emp.id, { costConfig: { ...cfg, customLines: updLines } });
+                                                                        }}
+                                                                        className={`text-[10px] font-bold px-2 py-0.5 rounded-full transition-colors ${
+                                                                            line.enabled ? 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200' : 'bg-gray-200 text-gray-500 hover:bg-gray-300'
+                                                                        }`}>{line.enabled ? 'Attiva' : 'Disabilitata'}</button>
+                                                                    <button
+                                                                        onClick={(e) => {
+                                                                            e.preventDefault();
+                                                                            e.stopPropagation();
+                                                                            const cfg = { ...getDefaultCostConfig(), ...(emp.costConfig || {}) };
+                                                                            const updLines = cfg.customLines.filter((_, i) => i !== idx);
+                                                                            updateEmployee(emp.id, { costConfig: { ...cfg, customLines: updLines } });
+                                                                        }}
+                                                                        className="p-1 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+                                                                        <Trash2 className="w-3 h-3" />
+                                                                    </button>
+                                                                </div>
+                                                            ))}
+                                                            {(emp.costConfig?.customLines ?? []).length === 0 && (
+                                                                <p className="text-xs text-gray-400 italic px-1">Nessuna voce custom. Aggiungile dall'Analisi Costi.</p>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </details>
+                                        </div>
+
 
                                         <div className="w-full min-w-0">
                                             <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden transition-all duration-300">

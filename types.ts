@@ -38,6 +38,35 @@ export interface Assignment {
 
 export type SplitMode = 'NONE' | 'FIXED' | 'PERCENT' | 'REMAINDER';
 
+// ─── CONFIGURAZIONE VOCI COSTO PER DIPENDENTE ────────────────────────────────
+
+export interface CostLineItem {
+  id: string;            // ID univoco (es. 'rimborso_km', 'ticket')
+  label: string;         // Nome visualizzato (es. 'Rimborso Km')
+  defaultAmount: number; // Importo mensile di default (0 = inserito manualmente)
+  enabled: boolean;      // Attiva globalmente
+}
+
+export interface EmployeeCostConfig {
+  includeContractHours: boolean;  // "Ore contratto × 15€"
+  includeExtraHours: boolean;     // "Ore extra × tariffa"
+  includeOvertime: boolean;       // "Straordinari × tariffa"
+  includeForfait: boolean;        // "Forfait"
+  includeExtraJobs: boolean;      // "Lavori extra"
+  includeSplits: boolean;         // "Trasferta / Benzina / Spese" da SplitConfig
+  customLines: CostLineItem[];
+}
+
+export const getDefaultCostConfig = (): EmployeeCostConfig => ({
+  includeContractHours: true,
+  includeExtraHours: true,
+  includeOvertime: true,
+  includeForfait: true,
+  includeExtraJobs: true,
+  includeSplits: true,
+  customLines: [],
+});
+
 export interface SplitConfig {
   travelMode: SplitMode;
   travelValue: number;
@@ -64,7 +93,10 @@ export interface Employee {
   // Gestione Contratti
   contractType?: ContractType;
   contractStartDate?: string; // YYYY-MM-DD
-  contractEndDate?: string; // YYYY-MM-DD — se impostato, il dipendente scompare dal mese successivo
+  contractEndDate?: string;   // YYYY-MM-DD — se impostato, il dipendente scompare dal mese successivo
+
+  // Configurazione voci costo (Analisi Costi)
+  costConfig?: EmployeeCostConfig;
 }
 
 export type AttendanceType = 'WORK' | 'FERIE' | 'MALATTIA' | 'PERMESSO' | 'ASSENZA' | 'STRAORDINARIO';
@@ -116,6 +148,10 @@ export interface MonthlyData {
   salaryMode?: Record<string, 'NET' | 'GROSS'>;
   // Key: "{empId}" - Text string for Sick Leave Code (PUC)
   sickLeaveCodes?: Record<string, string>;
+  // Key: "{empId}" - Array di lineId soppressi solo per questo mese
+  costLineSuppressed?: Record<string, string[]>;
+  // Key: "{empId}" - (lineId -> importo) override per questo mese
+  costLineAmounts?: Record<string, Record<string, number>>;
 }
 
 export interface DailyRecord {

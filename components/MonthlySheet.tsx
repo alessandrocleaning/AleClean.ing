@@ -789,22 +789,32 @@ export const MonthlySheet: React.FC<Props> = ({ userId, employees, sites, setEmp
     // State for Time Entry Modal
     const [timeEntryModalEmpId, setTimeEntryModalEmpId] = useState<string | null>(null);
 
+    const { year, monthIndex, daysInMonthObj, monthLabel } = useMemo(() => {
+        return {
+            year: currentDate.getFullYear(),
+            monthIndex: currentDate.getMonth(),
+            daysInMonthObj: getDaysInMonth(currentDate),
+            monthLabel: format(currentDate, 'MMMM yyyy', { locale: it }).toUpperCase()
+        };
+    }, [currentDate]);
+
     const storageKeyRaw = format(currentDate, 'yyyy-MM');
 
     const displayEmployees = useMemo(() => {
         const monthStart = storageKeyRaw + '-01';
+        const monthEnd = format(new Date(year, monthIndex + 1, 0), 'yyyy-MM-dd');
+
         return [...employees]
             .filter(emp => {
-                if (!emp.contractEndDate) return true;
-                return emp.contractEndDate >= monthStart;
+                if (emp.contractStartDate && emp.contractStartDate > monthEnd) return false;
+                if (emp.contractEndDate && emp.contractEndDate < monthStart) return false;
+                return true;
             })
             .sort((a, b) => {
-                // Group by allowance status (true/undefined first, false last)
                 const aIn = a.showInAllowances !== false;
                 const bIn = b.showInAllowances !== false;
                 if (aIn !== bIn) return aIn ? -1 : 1;
-                // Sort alphabetically within group
-                return a.firstName.localeCompare(b.firstName);
+                return 0; // Mantiene l'ordine relativo originale (stabilità del sort)
             });
     }, [employees, storageKeyRaw]);
 
@@ -898,14 +908,6 @@ export const MonthlySheet: React.FC<Props> = ({ userId, employees, sites, setEmp
             });
     };
 
-    const { year, monthIndex, daysInMonthObj, monthLabel } = useMemo(() => {
-        return {
-            year: currentDate.getFullYear(),
-            monthIndex: currentDate.getMonth(),
-            daysInMonthObj: getDaysInMonth(currentDate),
-            monthLabel: format(currentDate, 'MMMM yyyy', { locale: it }).toUpperCase()
-        };
-    }, [currentDate]);
 
     const daysColumns = useMemo(() => {
         const cols = [];
@@ -1989,8 +1991,12 @@ export const MonthlySheet: React.FC<Props> = ({ userId, employees, sites, setEmp
 
                                 const totalContract = daysColumns.reduce((acc, day) => {
                                     if (day.isHoliday) return acc;
+                                    const dayString = format(day.fullDate, 'yyyy-MM-dd');
+                                    if (emp.contractStartDate && dayString < emp.contractStartDate) return acc;
+                                    if (emp.contractEndDate && dayString > emp.contractEndDate) return acc;
                                     return acc + (emp.contractHours?.[day.dayKey] || 0);
                                 }, 0);
+
 
                                 const hasAssignments = emp.defaultAssignments.length > 0;
                                 const isAllForfait = hasAssignments && emp.defaultAssignments.every(a => a.type === 'FORFAIT');

@@ -13,7 +13,6 @@ import { subMonths, format } from 'date-fns';
 import { onAuthStateChanged, signOut, User } from 'firebase/auth';
 import { auth } from './lib/firebase';
 import { useFirestoreData } from './hooks/useFirestoreData';
-import { AgentDataInjector } from './components/AgentDataInjector';
 
 // ─── EMAIL UNICA AUTORIZZATA ───────────────────────────────────────────────
 const AUTHORIZED_EMAIL = 'alessandro.clean.ing@gmail.com';
@@ -80,7 +79,24 @@ const CHART_COLORS = [
 ];
 
 const App: React.FC<{ user: User; isAdmin: boolean }> = ({ user, isAdmin }) => {
-  const [view, setView] = useState<ViewMode>('dashboard');
+  const [view, setView] = useState<ViewMode>(() => {
+    const hash = window.location.hash.replace('#/', '');
+    const validViews: ViewMode[] = ['dashboard', 'employees', 'sites', 'generator', 'analisi', 'allowances'];
+    return validViews.includes(hash as ViewMode) ? (hash as ViewMode) : 'dashboard';
+  });
+
+  useEffect(() => {
+    const handleHashChange = () => {
+      const hash = window.location.hash.replace('#/', '');
+      const validViews: ViewMode[] = ['dashboard', 'employees', 'sites', 'generator', 'analisi', 'allowances'];
+      if (validViews.includes(hash as ViewMode)) {
+        setView(hash as ViewMode);
+      }
+    };
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
+
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   // ─── Firestore Data Hook ───────────────────────────────────────────────────
@@ -89,6 +105,8 @@ const App: React.FC<{ user: User; isAdmin: boolean }> = ({ user, isAdmin }) => {
     setEmployees,
     sites,
     setSites,
+    saldoCassa,
+    setSaldoCassa,
     syncStatus,
   } = useFirestoreData(user, isAdmin);
 
@@ -125,11 +143,6 @@ const App: React.FC<{ user: User; isAdmin: boolean }> = ({ user, isAdmin }) => {
     );
   };
 
-  // --- SALDO CASSA (manuale, salvato in localStorage) ---
-  const [saldoCassa, setSaldoCassa] = useState<number>(() => {
-    const saved = localStorage.getItem('dashboard_saldo_cassa');
-    return saved ? parseFloat(saved) : 0;
-  });
   const [editingSaldo, setEditingSaldo] = useState(false);
   const [saldoInput, setSaldoInput] = useState('');
   const saldoRef = useRef<HTMLInputElement>(null);
@@ -139,7 +152,6 @@ const App: React.FC<{ user: User; isAdmin: boolean }> = ({ user, isAdmin }) => {
     const val = parseFloat(saldoInput.replace(',', '.'));
     if (!isNaN(val)) {
       setSaldoCassa(val);
-      localStorage.setItem('dashboard_saldo_cassa', String(val));
     }
     setEditingSaldo(false);
   };
@@ -150,7 +162,7 @@ const App: React.FC<{ user: User; isAdmin: boolean }> = ({ user, isAdmin }) => {
     const lastMonth = subMonths(today, 1);
     const todayStr = format(today, 'yyyy-MM-dd');
     const lastMonthStr = format(lastMonth, 'yyyy-MM-dd');
-    const COSTO_ORA_CONTRATTO = 16; // €/ora fisso per ore da contratto
+    const COSTO_ORA_CONTRATTO = 15; // €/ora fisso per ore da contratto (come da accordi)
 
     // Helper: verifica se un assignment era attivo a una data
     const isAssignmentActive = (assign: any, dateStr: string) =>
@@ -174,14 +186,17 @@ const App: React.FC<{ user: User; isAdmin: boolean }> = ({ user, isAdmin }) => {
     // Fatturato stesso mese anno scorso: dato non storicizzato → stesso valore (n/d)
     const fatturatoAnnoScorso: number | null = null; // non disponibile
 
-    // --- COSTO PERSONALE (mese corrente) ---
-    // Ogni dipendente: ore da contratto × 4.33 sett/mese × 16€/ora
-    // + ore extra (FORFait) × hourlyRate dipendente
+    // Ogni dipendente: ore da contratto × 4.33 sett/mese × 15€/ora
+    // + eventuali forfait o ore extra stimati
     let costoPersonaleMese = 0;
     let oreContrattoTotali = 0;
     let oreExtraTotali = 0;
 
     employees.forEach(emp => {
+      // Escludi se il contratto non è ancora iniziato o è già terminato
+      if (emp.contractStartDate && emp.contractStartDate > todayStr) return;
+      if (emp.contractEndDate && emp.contractEndDate < todayStr) return;
+
       (emp.defaultAssignments || []).forEach(assign => {
         if (isAssignmentActive(assign, todayStr)) {
           const wh = weeklyHoursOf(assign);
@@ -190,9 +205,9 @@ const App: React.FC<{ user: User; isAdmin: boolean }> = ({ user, isAdmin }) => {
           costoPersonaleMese += oreMesaliContratto * COSTO_ORA_CONTRATTO;
 
           if (assign.type === 'FORFAIT' && assign.forfaitAmount) {
-            // forfait: costo aggiuntivo → stimiamo ore extra come forfait / hourlyRate
-            const rate = emp.hourlyRate || COSTO_ORA_CONTRATTO;
-            const oreExtra = assign.forfaitAmount / rate;
+            // forfait: costo aggiuntivo (stimiamo ore extra come forfait / hourlyRate)
+            const rate = emp.hourlyRate || 0;
+            const oreExtra = rate > 0 ? assign.forfaitAmount / rate : 0;
             oreExtraTotali += oreExtra;
             costoPersonaleMese += assign.forfaitAmount;
           }
@@ -224,18 +239,23 @@ const App: React.FC<{ user: User; isAdmin: boolean }> = ({ user, isAdmin }) => {
     const calculateOps = (dateStr: string) => {
       let hours = 0, contracts = 0, cost = 0;
       employees.forEach(emp => {
+        // Escludi se il contratto non è ancora iniziato o è già terminato rispetto alla data di calcolo
+        if (emp.contractStartDate && emp.contractStartDate > dateStr) return;
+        if (emp.contractEndDate && emp.contractEndDate < dateStr) return;
+
         (emp.defaultAssignments || []).forEach(assign => {
           if (isAssignmentActive(assign, dateStr)) {
             contracts++;
             const wh = weeklyHoursOf(assign);
             hours += wh;
-            cost += wh * 4.33 * (emp.hourlyRate || 0);
+            cost += wh * 4.33 * COSTO_ORA_CONTRATTO; // Ore contratto sempre a 15€
             if (assign.type === 'FORFAIT') cost += assign.forfaitAmount || 0;
           }
         });
       });
       return { hours, contracts, cost };
     };
+
 
     const current = calculateOps(todayStr);
     const previous = calculateOps(lastMonthStr);
@@ -406,74 +426,86 @@ const App: React.FC<{ user: User; isAdmin: boolean }> = ({ user, isAdmin }) => {
         <div className="flex-1 p-2 space-y-1 overflow-y-auto">
           {/* Dashboard */}
           {!isSidebarCollapsed && <div className="pt-2 pb-1 px-2 text-xs font-bold text-blue-300 uppercase tracking-wider whitespace-nowrap overflow-hidden"></div>}
-          <button
-            onClick={() => { setView('dashboard'); setIsSidebarOpen(false); }}
+          <a
+            href="#/dashboard"
+            onClick={(e) => { setIsSidebarOpen(false); }}
             title="Dashboard"
             className={`w-full text-left rounded-lg flex items-center font-semibold transition-all ${isSidebarCollapsed ? 'justify-center px-0 py-3' : 'px-4 py-3 gap-3'
               } ${view === 'dashboard' ? 'bg-[#ffec09] text-black shadow-lg' : 'hover:bg-white/10 text-white'}`}
           >
             <LayoutDashboard className="w-5 h-5 flex-shrink-0" />
             {!isSidebarCollapsed && <span className="truncate">Dashboard</span>}
-          </button>
+          </a>
+
 
           {!isSidebarCollapsed && <div className="pt-3 pb-1 px-2 text-xs font-bold text-blue-300 uppercase tracking-wider whitespace-nowrap">Gestione</div>}
           {isSidebarCollapsed && <div className="border-t border-white/10 my-1" />}
 
-          <button
-            onClick={() => { setView('employees'); setIsSidebarOpen(false); }}
+          <a
+            href="#/employees"
+            onClick={(e) => { setIsSidebarOpen(false); }}
             title="Dipendenti"
             className={`w-full text-left rounded-lg flex items-center font-semibold transition-all ${isSidebarCollapsed ? 'justify-center px-0 py-3' : 'px-4 py-3 gap-3'
               } ${view === 'employees' ? 'bg-[#ffec09] text-black shadow-lg' : 'hover:bg-white/10 text-white'}`}
           >
             <Users className="w-5 h-5 flex-shrink-0" />
             {!isSidebarCollapsed && <span className="truncate">Dipendenti</span>}
-          </button>
+          </a>
 
-          <button
-            onClick={() => { setView('sites'); setIsSidebarOpen(false); }}
+
+          <a
+            href="#/sites"
+            onClick={(e) => { setIsSidebarOpen(false); }}
             title="Cantieri"
             className={`w-full text-left rounded-lg flex items-center font-semibold transition-all ${isSidebarCollapsed ? 'justify-center px-0 py-3' : 'px-4 py-3 gap-3'
               } ${view === 'sites' ? 'bg-[#ffec09] text-black shadow-lg' : 'hover:bg-white/10 text-white'}`}
           >
             <MapPin className="w-5 h-5 flex-shrink-0" />
             {!isSidebarCollapsed && <span className="truncate">Cantieri</span>}
-          </button>
+          </a>
+
 
           {!isSidebarCollapsed && <div className="pt-3 pb-1 px-2 text-xs font-bold text-blue-300 uppercase tracking-wider whitespace-nowrap">Strumenti</div>}
           {isSidebarCollapsed && <div className="border-t border-white/10 my-1" />}
 
-          <button
-            onClick={() => { setView('generator'); setIsSidebarOpen(false); }}
+          <a
+            href="#/generator"
+            onClick={(e) => { setIsSidebarOpen(false); }}
             title="Generatore Mensile"
             className={`w-full text-left rounded-lg flex items-center font-semibold transition-all ${isSidebarCollapsed ? 'justify-center px-0 py-3' : 'px-4 py-3 gap-3'
               } ${view === 'generator' ? 'bg-[#ffec09] text-black shadow-lg' : 'hover:bg-white/10 text-white'}`}
           >
             <FileText className="w-5 h-5 flex-shrink-0" />
             {!isSidebarCollapsed && <span className="truncate">Generatore Mensile</span>}
-          </button>
+          </a>
 
-          <button
-            onClick={() => { setView('analisi'); setIsSidebarOpen(false); }}
+
+          <a
+            href="#/analisi"
+            onClick={(e) => { setIsSidebarOpen(false); }}
             title="Analisi Costi"
             className={`w-full text-left rounded-lg flex items-center font-semibold transition-all ${isSidebarCollapsed ? 'justify-center px-0 py-3' : 'px-4 py-3 gap-3'
               } ${view === 'analisi' ? 'bg-[#ffec09] text-black shadow-lg' : 'hover:bg-white/10 text-white'}`}
           >
             <Calculator className="w-5 h-5 flex-shrink-0" />
             {!isSidebarCollapsed && <span className="truncate">Analisi</span>}
-          </button>
+          </a>
+
 
           {!isSidebarCollapsed && <div className="pt-3 pb-1 px-2 text-xs font-bold text-blue-300 uppercase tracking-wider whitespace-nowrap">Amministrazione</div>}
           {isSidebarCollapsed && <div className="border-t border-white/10 my-1" />}
 
-          <button
-            onClick={() => { setView('allowances'); setIsSidebarOpen(false); }}
+          <a
+            href="#/allowances"
+            onClick={(e) => { setIsSidebarOpen(false); }}
             title="Cedolini"
             className={`w-full text-left rounded-lg flex items-center font-semibold transition-all ${isSidebarCollapsed ? 'justify-center px-0 py-3' : 'px-4 py-3 gap-3'
               } ${view === 'allowances' ? 'bg-[#ffec09] text-black shadow-lg' : 'hover:bg-white/10 text-white'}`}
           >
             <Wallet className="w-5 h-5 flex-shrink-0" />
             {!isSidebarCollapsed && <span className="truncate">Cedolini</span>}
-          </button>
+          </a>
+
         </div>
 
         {/* FOOTER — desktop only */}
@@ -524,7 +556,6 @@ const App: React.FC<{ user: User; isAdmin: boolean }> = ({ user, isAdmin }) => {
         )}
 
         {/* AI Agent Data Injector - Enabled for Revenue Injection */}
-        {/* <AgentDataInjector employees={employees} setEmployees={setEmployees} sites={sites} setSites={setSites} /> */}
 
         <div className="p-4 md:p-8 w-full min-h-full animate-fade-in-up">
 
@@ -953,8 +984,12 @@ const App: React.FC<{ user: User; isAdmin: boolean }> = ({ user, isAdmin }) => {
               userId={user.uid}
               employees={employees}
               sites={sites}
+              onUpdateEmployee={(updatedEmp) => {
+                setEmployees(prev => prev.map(e => e.id === updatedEmp.id ? updatedEmp : e));
+              }}
             />
           )}
+
 
           {/* VIEW: ALLOWANCES */}
           {view === 'allowances' && (

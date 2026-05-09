@@ -144,6 +144,18 @@ export const saveRecurringJobs = async (userId: string, jobs: Record<string, Ext
     await setDoc(doc(db, 'users', userId, 'data', 'recurringJobs'), { jobs });
 };
 
+// ─── SETTINGS (Dashboard, etc.) ─────────────────────────────────────────────
+
+export const loadSettings = async (userId: string): Promise<any> => {
+    const snap = await getDoc(doc(db, 'users', userId, 'data', 'settings'));
+    if (!snap.exists()) return {};
+    return snap.data() || {};
+};
+
+export const saveSettings = async (userId: string, settings: any): Promise<void> => {
+    await setDoc(doc(db, 'users', userId, 'data', 'settings'), settings);
+};
+
 // ─── MIGRATION: LocalStorage → Firestore ──────────────────────────────────
 
 /**
@@ -187,6 +199,13 @@ export const migrateFromLocalStorage = async (userId: string): Promise<boolean> 
         if (rawRecurring) {
             const jobs = JSON.parse(rawRecurring) as Record<string, ExtraJob[]>;
             await saveRecurringJobs(userId, jobs);
+            migrated = true;
+        }
+
+        // Migra il saldo cassa ("dashboard_saldo_cassa")
+        const rawSaldo = localStorage.getItem('dashboard_saldo_cassa');
+        if (rawSaldo) {
+            await saveSettings(userId, { saldoCassa: parseFloat(rawSaldo) });
             migrated = true;
         }
 
@@ -257,3 +276,73 @@ export const clearSplitConfigForFutureMonths = async (
 
     await Promise.all(promises);
 };
+
+/**
+ * Rimuove l'override dell'importo di una voce costo custom dai documenti mensili futuri.
+ * Usato quando si imposta un importo permanente ("da ora in poi").
+ */
+export const clearCostLineAmountForFutureMonths = async (
+    userId: string,
+    empId: string,
+    lineId: string,
+    fromMonthKey: string,
+    monthsAhead: number = 24
+): Promise<void> => {
+    const [year, month] = fromMonthKey.split('-').map(Number);
+    const promises: Promise<void>[] = [];
+
+    for (let i = 0; i < monthsAhead; i++) {
+        const d = new Date(year, month - 1 + i, 1);
+        const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+        const ref = doc(db, 'users', userId, 'monthly', key);
+        promises.push(
+            getDoc(ref).then(snap => {
+                if (!snap.exists()) return Promise.resolve();
+                const data = snap.data() as any;
+                if (!data.costLineAmounts?.[empId]?.[lineId]) return Promise.resolve();
+                const newAmounts = { ...data.costLineAmounts };
+                if (newAmounts[empId]) {
+                    newAmounts[empId] = { ...newAmounts[empId] };
+                    delete newAmounts[empId][lineId];
+                }
+                return setDoc(ref, { ...data, costLineAmounts: newAmounts });
+            })
+        );
+    }
+
+    await Promise.all(promises);
+};
+
+/**
+ * Rimuove la soppressione mensile di una voce dai mesi futuri.
+ * Usato quando si elimina una voce permanentemente (la soppressione mensile diventa ridondante).
+ */
+export const clearCostLineSuppressedForFutureMonths = async (
+    userId: string,
+    empId: string,
+    lineId: string,
+    fromMonthKey: string,
+    monthsAhead: number = 24
+): Promise<void> => {
+    const [year, month] = fromMonthKey.split('-').map(Number);
+    const promises: Promise<void>[] = [];
+
+    for (let i = 0; i < monthsAhead; i++) {
+        const d = new Date(year, month - 1 + i, 1);
+        const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+        const ref = doc(db, 'users', userId, 'monthly', key);
+        promises.push(
+            getDoc(ref).then(snap => {
+                if (!snap.exists()) return Promise.resolve();
+                const data = snap.data() as any;
+                if (!data.costLineSuppressed?.[empId]) return Promise.resolve();
+                const newSuppressed = { ...data.costLineSuppressed };
+                newSuppressed[empId] = (newSuppressed[empId] as string[]).filter((id: string) => id !== lineId);
+                return setDoc(ref, { ...data, costLineSuppressed: newSuppressed });
+            })
+        );
+    }
+
+    await Promise.all(promises);
+};
+
