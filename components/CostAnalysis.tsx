@@ -428,8 +428,7 @@ export const CostAnalysis: React.FC<Props> = ({ userId, employees, sites, onUpda
             const isActive = (lineId: string) => !suppressed.includes(lineId);
 
             // --- COSTO ---
-            const baseContractHours = diff < 0 ? effectiveHoursForDiff : totalContractRounded;
-            const baseContractCost = baseContractHours * COSTO_ORA_CONTRATTO;
+            // (baseContractHours e baseContractCost già calcolati sopra nella sezione diffValue)
 
             let costoTotale: number;
             if (isCedolino) {

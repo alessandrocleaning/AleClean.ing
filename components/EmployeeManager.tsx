@@ -414,7 +414,9 @@ export const EmployeeManager: React.FC<Props> = ({ employees, sites, setEmployee
     const [editLastName, setEditLastName] = useState('');
 
     const [isPaletteOpen, setIsPaletteOpen] = useState(false);
+    const [isCostConfigOpen, setIsCostConfigOpen] = useState(false);
     const [siteSearchTerm, setSiteSearchTerm] = useState('');
+
 
     const [configModalTarget, setConfigModalTarget] = useState<{ empId: string, siteId: string, index: number } | null>(null);
 
